@@ -51,21 +51,21 @@ flowchart TB
 Luồng phụ thuộc một chiều (DAG, không vòng):
 
 ```text
-domain (types, grid, regions, clue, public_state, errors)
+domain (types, errors, grid, regions, clue, public_state) [TẦNG 0]
   ▲              ▲
-  │        clues (base re-export, core, extensions, parser, validator)
+  │        clues (base, core, extensions, validator, parser) [TẦNG 1]
   │              ▲
-  ├────── encoding (stats, varmap, cardinality, clue_encoders, encoder)
+  ├────── encoding (stats, varmap, cardinality, clue_encoders, encoder) [TẦNG 2]
   │         ▲                        ▲
-  └──── reasoning (knowledge, kb_builder, entailment, uniqueness) ◄── sat (cnf, stats, solver, dpll)
+  └──── reasoning (knowledge, kb_builder, entailment, uniqueness) [TẦNG 3] ◄── sat (cnf, stats, solver, dpll) [TẦNG 1]
             ▲                          ▲                                      ▲
-            │                          └──────── agent (ports, trace, hint, logic_agent)
+            │                          └──────── agent (ports, trace, hint, logic_agent) [TẦNG 4]
             │                                                   ▲
-          engine (puzzle, loader, game_engine)                  │
+          engine (puzzle, loader, game_engine) [TẦNG 5]         │
             ▲                                                   │
-            └──────────────── app/session.py (GameSession) ─────┘
+            └──────────────── app/session.py (GameSession) [TẦNG 6] ┘
                                        ▲
-                                 gui (PyQt6) / experiments / main
+                                 gui (PyQt6) / experiments / main [TẦNG 7]
 ```
 
 - `sat/` thuần số nguyên, không import `domain/` hay `clues/`.
