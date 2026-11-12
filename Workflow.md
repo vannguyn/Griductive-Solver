@@ -1,152 +1,177 @@
-# Griductive Solver - Workflow, Input/Output và API
+# Griductive Solver - Workflow, Hợp đồng Biên và Luồng Xử lý
 
-Tài liệu này mô tả workflow kỹ thuật được suy ra từ `Analysis_Report.md`,
-`Process.md` và yêu cầu trong `AI - Project 2.pdf`. Mục tiêu là thống nhất cách
-các module nhận dữ liệu, xử lý và trả kết quả; đồng thời làm rõ cách GUI gọi API
-và cập nhật màn hình.
+Tài liệu này mô tả workflow kỹ thuật được thống nhất từ `Analysis_Report.md`,
+`Process.md`, `Audit_Report.md` (nhánh `docs/audit-team-lead`) và yêu cầu trong `AI - Project 2.pdf`.
+Mục tiêu là thống nhất luồng dữ liệu giữa các tầng, hợp đồng biên giữa 5 thành viên
+và cách giao diện Desktop `PyQt6` gọi qua `GameSession` (`app/session.py`).
 
 ## 1. Phạm vi và nguyên tắc bất biến
 
-Griductive Solver giải puzzle trên lưới `N x N`, với `N` thuộc `3, 4, 5`.
+Griductive Solver giải puzzle trên lưới `N x N`, với `N` thuộc `{3, 4, 5}`.
 Mỗi ô là một nhân vật có trạng thái `CRIMINAL` hoặc `INNOCENT`. Clue luôn đúng,
-nhưng chỉ được lộ sau khi verdict của ô đã được chứng minh bởi knowledge base
-hiện tại.
+nhưng chỉ được lộ nếu nằm trong `initially_revealed` ($KB_0$) hoặc sau khi verdict
+của ô được chứng minh bởi knowledge base hiện tại.
 
 Các nguyên tắc bắt buộc:
 
-1. Logic Agent chỉ nhận `PublicKnowledge`: clue đã lật và verdict đã được chứng
-   minh. Agent không import `engine`, không đọc `solution` và không đọc danh sách
-   thẻ đang úp.
+1. Logic Agent chỉ nhận `PublicState` / `PublicKnowledge`: clue đã lật và verdict đã
+   chứng minh. Agent không import `engine`, không đọc `solution` ẩn và không đọc
+   danh sách thẻ đang úp.
 2. CNF được sinh tự động từ clue, không hard-code riêng cho từng puzzle.
-3. Semantic evaluator độc lập với encoder để kiểm thử chéo.
-4. Biến nhân vật `C_i` và biến phụ `auxiliary` phải được cấp phát tách biệt.
-5. Agent chỉ kết luận khi một trạng thái bị ép bởi entailment; không suy đoán từ
-   model tùy ý.
-6. API chỉ trả `PublicState`; tuyệt đối không serialize `solution`, clue chưa
-   reveal hoặc thuộc tính ẩn của engine.
+3. Semantic evaluator (`clues/`, Minh) độc lập hoàn toàn với encoder (`encoding/`, Tân)
+   để kiểm thử chéo thực chất.
+4. Biến nhân vật `C_i` và biến phụ `auxiliary` được cấp phát tách biệt trong `VarMap`.
+5. Agent chỉ kết luận khi trạng thái bị ép bởi entailment theo chuẩn 2 truy vấn (§3.4);
+   tuyệt đối không đoán từ một model thỏa tùy ý và không nhầm `TIMEOUT` thành `UNSAT`.
+6. Giao diện `PyQt6` chỉ làm việc qua `GameSession` và `PublicState` / dataclass công khai;
+   không bao giờ chạm trực tiếp `solution` hay clue chưa reveal.
 
 ## 2. Kiến trúc và dependency flow
 
 ```mermaid
 flowchart TB
-    GUI[GUI / Browser] -->|JSON request| API[API adapter]
-    API --> ENGINE[GameEngine]
-    ENGINE -->|PublicKnowledge only| AGENT[LogicAgent]
-    AGENT --> REASON[Reasoning]
-    REASON --> ENCODING[Encoder]
-    ENCODING --> SAT[DPLL solver]
-    CLUES[Clues + semantic evaluator] --> ENCODING
-    DOMAIN[Domain types + grid regions] --> CLUES
-    ENGINE -->|PublicState JSON| API
-    API -->|JSON response| GUI
-    EXP[Experiments] --> AGENT
+    GUI[PyQt6 GUI: gui/*] -->|QFileDialog / submit / hint / QTimer| SESSION[GameSession: app/session.py]
+    SESSION -->|public calls| ENGINE[GameEngine: engine/]
+    SESSION -->|PublicGame port| AGENT[LogicAgent: agent/]
+    ENGINE -->|PublicState| SESSION
+    AGENT -->|AutoSolveStep / Hint| SESSION
+    ENGINE -->|PublicKnowledge only| REASON[Reasoning: reasoning/]
+    AGENT --> REASON
+    AGENT --> SAT[SAT: sat/ + CountingSolver]
+    REASON --> ENCODING[Encoder: encoding/]
+    REASON --> SAT
+    ENCODING --> CLUES[Clues + evaluator: clues/]
+    CLUES --> DOMAIN[Domain types, Coord, Clue ABC, PublicState: domain/]
+    EXP[Experiments: experiments/] --> AGENT
     EXP --> REASON
+    EXP --> ENCODING
+    EXP --> ENGINE
 ```
 
-Luồng phụ thuộc một chiều:
+Luồng phụ thuộc một chiều (DAG, không vòng):
 
 ```text
-domain <- clues <- encoding <- sat
-                         ^       ^
-                         |       |
-                    reasoning --+
-                         ^
-                       agent
-                         ^
-                       engine <- gui / experiments / main
+domain (types, grid, regions, clue, public_state, errors)
+  ▲              ▲
+  │        clues (base re-export, core, extensions, parser, validator)
+  │              ▲
+  ├────── encoding (stats, varmap, cardinality, clue_encoders, encoder)
+  │         ▲                        ▲
+  └──── reasoning (knowledge, kb_builder, entailment, uniqueness) ◄── sat (cnf, stats, solver, dpll)
+            ▲                          ▲                                      ▲
+            │                          └──────── agent (ports, trace, hint, logic_agent)
+            │                                                   ▲
+          engine (puzzle, loader, game_engine)                  │
+            ▲                                                   │
+            └──────────────── app/session.py (GameSession) ─────┘
+                                       ▲
+                                 gui (PyQt6) / experiments / main
 ```
 
-`engine` được phép dùng `reasoning` để kiểm tra verdict, nhưng `agent` không
-được phụ thuộc ngược vào `engine`. `PublicState` là biên giới dữ liệu duy nhất
-giữa engine và phần còn lại của ứng dụng.
+- `sat/` thuần số nguyên, không import `domain/` hay `clues/`.
+- `domain/` không import `clues/` (`Clue` ABC đặt ngay tại `domain/clue.py`).
+- `reasoning/` không import `agent/` (`classify` nhận `SatSolver` Protocol từ `sat/solver.py`).
+- `agent/` không bao giờ import `engine/`, chỉ nhận `PublicGame` (`agent/ports.py`).
+- `GameEngine` thực thi cấu trúc `PublicGame` mà không import `agent/`.
+- `app/session.py` tách khỏi `engine/` (do Gia Hưng phụ trách duy nhất cùng `engine/` và `gui/`).
 
-## 3. Cấu trúc thư mục đã tạo
+## 3. Cấu trúc thư mục chuẩn
 
 ```text
-Griductive-Solver/
-├── AI - Project 2.pdf
-├── Analysis_Report.md
-├── Process.md
-├── Workflow.md
-├── Source/
-│   ├── main.py
-│   ├── README.md
-│   ├── requirements.txt
-│   └── griductive/
-│       ├── domain/
-│       │   ├── types.py
-│       │   ├── grid.py
-│       │   ├── regions.py
-│       │   └── errors.py
-│       ├── clues/
-│       │   ├── base.py
-│       │   ├── core.py
-│       │   ├── extensions.py
-│       │   ├── validator.py
-│       │   └── parser.py
-│       ├── sat/
-│       │   ├── cnf.py
-│       │   ├── dpll.py
-│       │   └── stats.py
-│       ├── encoding/
-│       │   ├── varmap.py
-│       │   ├── cardinality.py
-│       │   ├── clue_encoders.py
-│       │   ├── encoder.py
-│       │   └── stats.py
-│       ├── reasoning/
-│       │   ├── knowledge.py
-│       │   ├── kb_builder.py
-│       │   ├── entailment.py
-│       │   └── uniqueness.py
-│       ├── agent/
-│       │   ├── logic_agent.py
-│       │   ├── hint.py
-│       │   └── trace.py
-│       ├── engine/
-│       │   ├── puzzle.py
-│       │   ├── loader.py
-│       │   ├── game_engine.py
-│       │   └── public_state.py
-│       ├── gui/
-│       │   ├── app.py
-│       │   ├── board_view.py
-│       │   ├── clue_panel.py
-│       │   ├── controls.py
-│       │   └── assets/
-│       └── experiments/
-│           ├── runner.py
-│           ├── metrics.py
-│           └── export.py
-├── puzzles/
-│   ├── 3x3/
-│   ├── 4x4/
-│   └── 5x5/
-├── results/
-└── tests/
-    ├── test_dpll.py
-    ├── test_encoder_vs_eval.py
-    ├── test_entailment.py
-    ├── test_uniqueness.py
-    └── test_isolation.py
+StudentID1_StudentID2_.../
+├── Report.pdf
+└── Source/
+    ├── main.py
+    ├── pytest.ini                  # pythonpath = ., testpaths = tests
+    ├── README.md
+    ├── requirements.txt            # PyQt6>=6.6, pytest>=8.0
+    ├── griductive/
+    │   ├── domain/
+    │   │   ├── errors.py
+    │   │   ├── types.py
+    │   │   ├── grid.py
+    │   │   ├── regions.py
+    │   │   ├── clue.py             # Clue ABC (id, owner, clue_type, cells, evaluate)
+    │   │   └── public_state.py     # PublicCell, PublicState, VerdictOutcome
+    │   ├── clues/
+    │   │   ├── base.py             # re-export Clue từ domain.clue
+    │   │   ├── core.py             # Minh: Fact, Same, Different, Exactly, AtLeast, AtMost
+    │   │   ├── extensions.py       # Minh: Parity, Compound (≥2; CompareCount tùy chọn)
+    │   │   ├── validator.py        # Tân: kiểm tra k, region, tham chiếu
+    │   │   └── parser.py           # Tân: dict/JSON -> Clue
+    │   ├── sat/
+    │   │   ├── stats.py            # SolverStats
+    │   │   ├── cnf.py              # Literal, Clause, SatStatus, CNF, SatResult
+    │   │   ├── solver.py           # SatSolver Protocol + CountingSolver
+    │   │   └── dpll.py             # DPLLSolver.solve(cnf, assumptions, deadline)
+    │   ├── encoding/
+    │   │   ├── stats.py            # EncodingStats
+    │   │   ├── varmap.py           # VarMap
+    │   │   ├── cardinality.py      # direct estimate <= threshold + sequential counter
+    │   │   ├── clue_encoders.py
+    │   │   └── encoder.py          # Encoder.encode(clues) -> (CNF, EncodingStats)
+    │   ├── reasoning/
+    │   │   ├── knowledge.py        # PublicKnowledge
+    │   │   ├── kb_builder.py       # build_kb_cnf() -> (CNF, VarMap, EncodingStats)
+    │   │   ├── entailment.py       # SatQuery, ClassifyOutcome, check_kb_consistent, classify
+    │   │   └── uniqueness.py       # UniquenessOutput, check_uniqueness
+    │   ├── agent/
+    │   │   ├── ports.py            # PublicGame Protocol
+    │   │   ├── trace.py            # TraceSatQuery, TraceStep, SolveTrace
+    │   │   ├── hint.py             # Hint, suggest_hint
+    │   │   └── logic_agent.py      # AutoSolveStep, LogicAgent (bọc CountingSolver, iter_steps, run)
+    │   ├── engine/
+    │   │   ├── puzzle.py
+    │   │   ├── loader.py           # schema + khớp solution nhanh (không chạy uniqueness ở GUI load)
+    │   │   └── game_engine.py      # GameEngine (thỏa PublicGame không import agent/)
+    │   ├── app/
+    │   │   └── session.py          # GameSession mỏng (chủ duy nhất: Gia Hưng)
+    │   ├── gui/                    # Desktop PyQt6
+    │   │   ├── app.py
+    │   │   ├── board_view.py
+    │   │   ├── clue_panel.py
+    │   │   ├── controls.py
+    │   │   └── assets/
+    │   └── experiments/
+    │       ├── validate_puzzle.py  # CLI offline: uniqueness + giải được không đoán
+    │       ├── runner.py
+    │       ├── metrics.py
+    │       └── export.py
+    ├── puzzles/
+    │   ├── 3x3/
+    │   ├── 4x4/
+    │   └── 5x5/
+    ├── results/
+    └── tests/
+        ├── oracle.py               # vét cạn 2^(N^2) phép gán biến chính qua clue.evaluate()
+        ├── test_dpll.py
+        ├── test_encoder_vs_eval.py
+        ├── test_entailment.py
+        ├── test_uniqueness.py
+        └── test_isolation.py       # AST tĩnh + dynamic MockGame
 ```
 
-Các file `.py` hiện là skeleton có docstring; phần workflow dưới đây là hợp
-đồng cần dùng khi triển khai từng file.
+Các file `.py` nghiệp vụ được triển khai dần theo bảng phân công trong `Process.md`;
+các file biên dùng chung giữ hợp đồng chặt chẽ ở phần dữ liệu và chữ ký hàm dưới đây.
 
 ## 4. Hợp đồng dữ liệu chung
 
-### 4.1. Kiểu dữ liệu chính
+### 4.1. Kiểu dữ liệu & Enums chính
 
-| Kiểu | Giá trị | Ý nghĩa |
-|---|---|---|
-| `Status` | `CRIMINAL`, `INNOCENT` | Trạng thái của một ô |
-| `Classification` | `CRIMINAL`, `INNOCENT`, `UNKNOWN`, `INCONSISTENT` | Kết quả entailment |
-| `VerdictResult` | `ACCEPTED`, `NOT_PROVABLE`, `CONTRADICTED` | Kết quả người chơi nộp verdict |
-| `SolveStatus` | `RUNNING`, `SOLVED`, `FAILED`, `TIMEOUT` | Trạng thái auto-solve/thí nghiệm |
+| Kiểu | Vị trí | Giá trị / Trường chính | Ý nghĩa |
+|---|---|---|---|
+| `Status` | `domain/types.py` | `CRIMINAL`, `INNOCENT` | Trạng thái một ô |
+| `SatStatus` | `sat/cnf.py` | `SAT`, `UNSAT`, `TIMEOUT` | Kết quả thuần DPLL |
+| `Classification` | `domain/types.py` | `CRIMINAL`, `INNOCENT`, `UNKNOWN`, `INCONSISTENT`, `TIMEOUT` | Kết quả entailment |
+| `VerdictResult` | `domain/types.py` | `ACCEPTED`, `NOT_PROVABLE`, `CONTRADICTED`, `ALREADY_REVEALED` | Kết quả nộp verdict |
+| `SolveStatus` | `domain/types.py` | `RUNNING`, `SOLVED`, `STUCK`, `INCONSISTENT`, `TIMEOUT` | Trạng thái auto-solve/thí nghiệm (bỏ `FAILED`) |
+| `UniquenessResult` | `domain/types.py` | `UNIQUE`, `MULTIPLE`, `UNSAT`, `TIMEOUT` | Kết quả uniqueness check |
+| `SatQuery` / `ClassifyOutcome` | `reasoning/entailment.py` | `SatQuery(var_id, assumed_literal, status)`, `ClassifyOutcome(classification, queries)` | Truy vấn & kết quả entailment |
+| `TraceSatQuery` / `TraceStep` | `agent/trace.py` | `TraceSatQuery(coord, assumed_status, status)`, `TraceStep(..., active_clue_ids, sat_queries, ...)` | Nhật ký truy vấn đầy đủ (PDF §4.4) |
+| `AutoSolveStep` | `agent/logic_agent.py` | `(step, public_state, trace)` | Sự kiện yield từ `iter_steps` & `GameSession.auto_solve_steps` |
 
-Coordinate dùng chuỗi như `A1`, `B2`, `C3`. `row-major` là thứ tự cố định để
-ánh xạ biến:
+Coordinate dùng chuỗi như `A1`, `B2`, `C3` (lưới `N x N`, `A..` từ trái sang phải, `1..N` từ trên xuống dưới).
+`row-major` là thứ tự cố định để ánh xạ biến chính:
 
 ```text
 var_id(A1) = 1
@@ -155,15 +180,15 @@ var_id(B1) = 2
 var_id(A2) = N + 1
 ```
 
-Biến phụ bắt đầu sau toàn bộ biến chính và chỉ được `VarMap` cấp phát; không
-được trùng với biến nhân vật.
+Biến phụ bắt đầu sau `N * N` và chỉ được `VarMap` cấp phát; không được trùng biến nhân vật.
 
-### 4.2. Schema puzzle JSON đề xuất
+### 4.2. Schema puzzle JSON
 
 ```json
 {
   "id": "p01",
   "size": 3,
+  "initially_revealed": ["A1"],
   "characters": [
     {"cell": "A1", "name": "Abel", "job": "Detective"}
   ],
@@ -183,82 +208,71 @@ Biến phụ bắt đầu sau toàn bộ biến chính và chỉ được `VarMa
 }
 ```
 
-`solution` chỉ được loader và engine giữ trong bộ nhớ. API không được trả trường
-này. Puzzle trước khi chạy phải thỏa:
+`solution` chỉ được loader và engine giữ trong bộ nhớ; `PublicState` không bao giờ chứa `solution` hay clue chưa reveal.
+Puzzle hợp lệ phải thỏa:
 
-- đúng `size * size` ô;
-- mọi ô/clue/region hợp lệ;
-- mọi clue đúng với solution ẩn;
-- toàn bộ clue có đúng một nghiệm khi chạy uniqueness check.
+- đúng `size * size` ô và nhân vật;
+- mỗi ô có đúng một clue với ánh xạ 1-1 `owner` hợp lệ;
+- `initially_revealed` khác rỗng (hoặc tạo thành $KB_0$ khởi đầu hợp lệ), mọi phần tử nằm trong lưới;
+- mọi clue/region/`k` hợp lệ và `clue.evaluate(solution) == True`;
+- qua kiểm tra uniqueness (`UniquenessResult.UNIQUE` trên biến chính) + giải được không đoán khi chạy `experiments/validate_puzzle.py` offline.
 
 ## 5. Workflow tổng thể từ input đến output
 
 ```mermaid
 flowchart LR
-    J[Puzzle JSON] --> L[Loader]
-    L --> V[Validate puzzle + clue]
-    V --> P[Puzzle in engine]
+    J[Puzzle JSON in Source/puzzles] --> L[Loader: schema + solution check]
+    L --> P[GameEngine: KB_0]
     P --> PS[Initial PublicState]
-    PS --> U[GUI renders board]
-    U --> Q[User click / Hint / Auto Solve]
-    Q --> R[JSON API request]
-    R --> E[Engine or Agent]
+    PS --> S[GameSession: app/session.py]
+    S --> U[PyQt6 GUI]
+    U --> Q[User verdict / Hint / Auto Solve]
+    Q --> S
+    S --> E[GameEngine or LogicAgent]
     E --> K[PublicKnowledge]
-    K --> C[Build CNF]
-    C --> D[DPLL]
-    D --> T[Entailment / verdict]
-    T --> O[Public JSON response]
-    O --> U
+    K --> C[build_kb_cnf -> CNF]
+    C --> D[DPLL via SatSolver]
+    D --> T[ClassifyOutcome / VerdictOutcome]
+    T --> S
+    S --> U
 ```
 
-GUI không gọi thẳng `DPLL`, `solution` hoặc các class nội bộ của engine. GUI chỉ
-gọi API adapter; adapter gọi engine/agent rồi chuyển kết quả thành JSON công
-khai.
+GUI `PyQt6` không gọi thẳng `DPLL`, `Puzzle.solution` hay thuộc tính nội bộ của engine.
+GUI chỉ gọi `GameSession` và vẽ lại màn hình theo `PublicState`, `VerdictOutcome`, `Hint`, hoặc `AutoSolveStep` trả về.
 
 ## 6. Workflow và I/O của từng chức năng
 
-### 6.1. Load và validate puzzle
+### 6.1. Load puzzle nhanh & Validate offline
 
-**Module:** `engine/loader.py`
+**Runtime (`engine/loader.py`):** đọc JSON, parse coordinate, dựng `Clue` qua `clues/parser.py`, kiểm tra schema, ánh xạ 1-1 `owner`, `initially_revealed` và `clue.evaluate(solution) == True`. Không chạy SAT uniqueness trong lúc GUI mở file để tránh treo màn hình trên lưới `5x5`.
 
-**Input:** đường dẫn file JSON hoặc object JSON.
-
-**Xử lý:** đọc schema, parse coordinate, tạo clue, kiểm tra range của `k`, vùng
-tham chiếu, kích thước lưới, tính đúng của clue và uniqueness.
-
-**Output:** `Puzzle` hợp lệ hoặc lỗi `InvalidPuzzleError` kèm danh sách lỗi.
+**Offline (`experiments/validate_puzzle.py`):** chạy ngoài runtime GUI để kiểm tra trọn vẹn bộ puzzle bằng `check_uniqueness(...) -> UniquenessResult.UNIQUE` và chạy thử `LogicAgent` xác nhận giải được không đoán.
 
 ```mermaid
 flowchart LR
-    A[JSON path / dict] --> B[Parse size + characters]
-    B --> C[Parse each clue]
-    C --> D[Validate cells, k, region]
-    D --> E{Schema valid?}
-    E -- No --> F[InvalidPuzzleError]
-    E -- Yes --> G[Encode all clues]
-    G --> H[Uniqueness check]
-    H --> I{Exactly one model?}
-    I -- No --> J[Reject puzzle]
-    I -- Yes --> K[Puzzle object in Engine]
+    A[JSON path / QFileDialog] --> B[Parse size, characters, initially_revealed]
+    B --> C[Parse each clue & validate owner/k/region]
+    C --> D{Schema & solution eval valid?}
+    D -- No --> E[InvalidPuzzleError]
+    D -- Yes --> F[Puzzle -> GameEngine KB_0 -> PublicState]
 ```
 
-GUI gọi `POST /api/puzzles/load` với `{ "path": "puzzles/3x3/p01.json" }`.
-GUI nhận `200` cùng `PublicState` ban đầu, hoặc `400` với `code` và `message`
-để hiển thị lỗi.
+Nút **Load** trên GUI mở `QFileDialog` (thư mục mặc định `Source/puzzles/`), gọi `GameSession.load_puzzle(path)` và nhận `PublicState` khởi tạo $KB_0$ (hoặc bắt `InvalidPuzzleError` để hiện thông báo lỗi gọn).
 
 ### 6.2. Parse clue và semantic evaluator
 
-**Module:** `clues/parser.py`, `clues/core.py`, `clues/extensions.py`.
+**Module:** `domain/clue.py` (ABC `Clue`), `clues/base.py` (re-export), `clues/core.py` & `clues/extensions.py` (Minh giữ `evaluate()`), `clues/parser.py` & `clues/validator.py` (Tân giữ parser/validator).
 
-Mỗi clue phải triển khai:
+Mỗi clue kế thừa `Clue(ABC)` (`id`, `owner`, `clue_type`, không mang trường `text`) và triển khai:
 
 ```python
 clue.cells() -> tuple[Coord, ...]
-clue.evaluate(assign: dict[Coord, bool]) -> bool
+clue.evaluate(assign: Mapping[Coord, bool]) -> bool
 ```
 
 Evaluator không gọi encoder. Nó tính trực tiếp ngữ nghĩa clue trên phép gán
-Boolean, nhờ đó có thể dùng làm oracle trong `test_encoder_vs_eval.py`.
+Boolean, nhờ đó có thể dùng làm oracle trong `test_encoder_vs_eval.py` (do tác giả
+`evaluate()` và tác giả `encoding/` là hai người khác nhau).
 
 ```mermaid
 flowchart LR
@@ -282,12 +296,12 @@ Các clue core:
 | `AT_LEAST` | `k`, `region` | `sum(assign[c]) >= k` |
 | `AT_MOST` | `k`, `region` | `sum(assign[c]) <= k` |
 
-Extension nên triển khai tối thiểu hai loại trong các loại sau:
+Extension chốt triển khai chắc chắn **2 loại bắt buộc** trước:
 
 - `PARITY`: số Criminal trong vùng là chẵn/lẻ;
-- `COMPOUND`: AND/OR/NOT của các clue con;
-- `COMPARE_COUNT`: số Criminal ở `region_left` lớn hơn/nhỏ hơn/bằng
-  `region_right`.
+- `COMPOUND`: AND/OR/NOT của các clue con.
+
+*(Mở rộng tùy chọn nếu còn thời gian: `COMPARE_COUNT` — so sánh số Criminal giữa `region_left` và `region_right`.)*
 
 ### 6.3. Sinh region
 
@@ -342,7 +356,7 @@ trace, DIMACS, báo cáo và test có kết quả tái lập.
 
 ```mermaid
 flowchart LR
-    A[Clue list] --> B[Dispatch by clue.type]
+    A[Clue list] --> B[Dispatch by clue.clue_type]
     B --> C{Binary or cardinality?}
     C -- FACT/SAME/DIFFERENT --> D[Emit direct clauses]
     C -- COUNT --> E[Cardinality encoder]
@@ -367,15 +381,15 @@ bộ `2^|R|` phép gán.
 
 **Module:** `encoding/cardinality.py`
 
-**Input:** danh sách literal chính, `k`, loại ràng buộc.
+**Input:** danh sách literal chính, `k`, loại ràng buộc, và `direct_threshold` (mặc định `64`).
 
 **Output:** các clause CNF và các auxiliary literal nếu cần.
 
 ```mermaid
 flowchart LR
-    A[Literals R + k] --> B{Region small?}
+    A[Literals R + k] --> B{Ước lượng clauses <= direct_threshold?}
     B -- Yes --> C[Direct forbidden combinations]
-    B -- No --> D[Sequential counter / totalizer]
+    B -- No --> D[Sequential counter]
     C --> E[CNF clauses]
     D --> E
     E --> F[Equivalent count constraint]
@@ -386,15 +400,15 @@ rộng bằng biến phụ khi và chỉ khi `clue.evaluate(assignment)` là `Tr
 
 ### 6.7. DPLL solver
 
-**Module:** `sat/dpll.py`
+**Module:** `sat/dpll.py`, `sat/solver.py`
 
-**Input:** `CNF`, optional assumptions là list literal.
+**Input:** `CNF(num_vars, clauses)` thuần số nguyên, `assumptions: Sequence[int] = ()`, và `deadline: float | None = None`.
 
-**Output:** `SatResult`:
+**Output:** `SatResult(status: SatStatus, model: dict[int, bool] | None, stats: SolverStats)` với `SatStatus` thuộc `{SAT, UNSAT, TIMEOUT}`:
 
 ```json
 {
-  "sat": true,
+  "status": "SAT",
   "model": {"1": true, "2": false},
   "stats": {
     "decisions": 2,
@@ -407,23 +421,24 @@ rộng bằng biến phụ khi và chỉ khi `clue.evaluate(assignment)` là `Tr
 
 ```mermaid
 flowchart TD
-    A[CNF + assumptions] --> B[Apply assumptions]
-    B --> C[Unit propagation]
-    C --> D{Empty clause?}
-    D -- Yes --> E[Conflict / UNSAT at branch]
-    D -- No --> F{All clauses satisfied?}
-    F -- Yes --> G[SAT + model]
-    F -- No --> H[Choose unassigned literal]
-    H --> I[Branch literal = true]
-    I --> C
-    E --> J{Alternative branch?}
-    J -- Yes --> K[Backtrack + branch false]
-    K --> C
-    J -- No --> L[UNSAT]
+    A[CNF + assumptions + deadline] --> B[Apply assumptions]
+    B --> C{Deadline exceeded?}
+    C -- Yes --> T[TIMEOUT]
+    C -- No --> D[Unit propagation]
+    D --> E{Empty clause?}
+    E -- Yes --> F[Conflict / UNSAT at branch]
+    E -- No --> G{All clauses satisfied?}
+    G -- Yes --> H[SAT + complete model]
+    G -- No --> I[Choose unassigned literal]
+    I --> J[Branch literal = true]
+    J --> C
+    F --> K{Alternative branch?}
+    K -- Yes --> L[Backtrack + branch false]
+    L --> C
+    K -- No --> M[UNSAT]
 ```
 
-DPLL chỉ làm việc với số nguyên đại diện literal. Nó không import GUI, không
-đọc file puzzle và không biết khái niệm Criminal/Clue.
+`DPLLSolver` chỉ làm việc với số nguyên đại diện literal và luôn trả **complete assignment** cho `1..cnf.num_vars` khi `status == SAT`. Mọi lớp phía trên gọi qua `SatSolver` Protocol; `CountingSolver` (`sat/solver.py`) bọc `SatSolver` để gom tổng số call, `decisions`, `propagations`, `backtracks`, `runtime_ms`. DPLL không import GUI, không đọc file puzzle và không biết khái niệm Criminal/Clue.
 
 ### 6.8. Build knowledge base công khai
 
@@ -452,366 +467,294 @@ clue, nhưng chỉ chuyển clue vừa được phép lộ sang `PublicKnowledge
 
 **Module:** `reasoning/entailment.py`
 
-Định nghĩa:
+**Chữ ký chính:**
+
+- `check_kb_consistent(cnf_kb: CNF, solver: SatSolver, deadline: float | None = None) -> SatStatus`
+- `classify(cnf_kb: CNF, var_id: int, solver: SatSolver, deadline: float | None = None) -> ClassifyOutcome`
+
+Định nghĩa theo đề §3.4 (baseline bắt buộc 2 truy vấn):
 
 ```text
 KB entails C_i      iff KB AND NOT C_i is UNSAT
 KB entails NOT C_i  iff KB AND C_i is UNSAT
 ```
 
-Kết quả:
+Kết quả (`ClassifyOutcome(classification, queries: tuple[SatQuery, ...])`):
 
-- chỉ `C_i` bị ép -> `CRIMINAL`;
-- chỉ `NOT C_i` bị ép -> `INNOCENT`;
+- KB đầu wave là `UNSAT` -> `INCONSISTENT`; nếu quá `deadline` -> `TIMEOUT`;
+- chỉ `NOT C_i` làm KB UNSAT -> `CRIMINAL`;
+- chỉ `C_i` làm KB UNSAT -> `INNOCENT`;
 - cả hai đều SAT -> `UNKNOWN`;
-- cả hai đều UNSAT hoặc KB ban đầu UNSAT -> `INCONSISTENT`.
+- cả hai đều UNSAT -> `INCONSISTENT`;
+- một trong hai query trả `SatStatus.TIMEOUT` -> `TIMEOUT`.
 
 ```mermaid
 flowchart TD
-    A[Public CNF KB + cell var] --> B[Check KB SAT]
-    B --> C{KB SAT?}
-    C -- No --> D[INCONSISTENT]
-    C -- Yes --> E[Query KB + cell=true]
-    E --> F[Query KB + cell=false]
-    F --> G{true SAT?}
-    G -- No --> H{false SAT?}
-    G -- Yes --> I{false SAT?}
-    H -- Yes --> J[INNOCENT]
-    H -- No --> D
-    I -- No --> K[CRIMINAL]
-    I -- Yes --> L[UNKNOWN]
+    A[Wave start: Public CNF KB] --> B[check_kb_consistent: SAT of KB]
+    B --> C{SatStatus?}
+    C -- UNSAT --> D[INCONSISTENT]
+    C -- TIMEOUT --> T[TIMEOUT]
+    C -- SAT --> E[For unrevealed cell var_id]
+    E --> F[Query 1: KB + -var_id]
+    F --> Q1{Status?}
+    Q1 -- TIMEOUT --> T2[Classification.TIMEOUT]
+    Q1 -- SAT or UNSAT --> G[Query 2: KB + +var_id]
+    G --> Q2{Status?}
+    Q2 -- TIMEOUT --> T2
+    Q2 -- SAT or UNSAT --> H{Both UNSAT / Which UNSAT?}
+    H -- Only -var_id UNSAT --> K[CRIMINAL]
+    H -- Only +var_id UNSAT --> J[INNOCENT]
+    H -- Both SAT --> L[UNKNOWN]
+    H -- Both UNSAT --> D
 ```
 
-Tối ưu được phép dùng: lấy một model `M` của KB, sau đó kiểm tra một counter-
-model `KB AND (C_i != M[i])` cho mỗi ô. UNSAT nghĩa là ô bị ép theo `M[i]`;
-SAT nghĩa là ô còn UNKNOWN. Dù dùng tối ưu hay hai query chuẩn, kết quả phải
-giống nhau.
+Từng query trong `ClassifyOutcome.queries` (`SatQuery(var_id, assumed_literal, status)`) được trả về cho Agent ghi vào `TraceStep.sat_queries` đúng theo yêu cầu PDF §4.4. Tối ưu 1-query dùng model `M` là phần mở rộng tùy chọn nếu cần benchmark thêm, không bắt buộc trong baseline.
 
 ### 6.10. Kiểm tra uniqueness
 
 **Module:** `reasoning/uniqueness.py`
 
-**Input:** CNF đầy đủ của puzzle và danh sách biến chính.
+**Chữ ký chính:** `check_uniqueness(cnf: CNF, num_primary_vars: int, solver: SatSolver, deadline: float | None = None) -> UniquenessOutput`
 
-**Output:** `UNIQUE`, `MULTIPLE`, hoặc `UNSAT` cùng model đầu tiên nếu có.
+**Input:** CNF đầy đủ của puzzle, `num_primary_vars` (`N*N`), `solver`, optional `deadline`.
+
+**Output:** `UniquenessOutput(result: UniquenessResult, first_model: dict[int, bool] | None, stats: SolverStats)` với `UniquenessResult` thuộc `{UNIQUE, MULTIPLE, UNSAT, TIMEOUT}`.
 
 ```mermaid
 flowchart LR
     A[Full puzzle CNF] --> B[Solve first model M]
-    B --> C{SAT?}
-    C -- No --> D[UNSAT puzzle]
-    C -- Yes --> E[Add blocking clause for primary vars]
+    B --> C{Status?}
+    C -- UNSAT --> D[UNSAT]
+    C -- TIMEOUT --> T[TIMEOUT]
+    C -- SAT --> E[Add blocking clause on 1..num_primary_vars]
     E --> F[Solve again]
-    F --> G{Second model?}
-    G -- No --> H[UNIQUE]
-    G -- Yes --> I[MULTIPLE]
+    F --> G{Status?}
+    G -- UNSAT --> H[UNIQUE]
+    G -- SAT --> I[MULTIPLE]
+    G -- TIMEOUT --> T
 ```
 
-Blocking clause chỉ chặn đúng assignment của các biến chính. Biến phụ có thể
-khác nhau nhưng không được làm một assignment nhân vật hợp lệ bị xem là nghiệm
-thứ hai.
+Blocking clause chỉ chặn đúng assignment của các biến chính `1..num_primary_vars`. Biến phụ (`> num_primary_vars`) có thể khác nhau nhưng không được làm một assignment nhân vật hợp lệ bị xem là nghiệm thứ hai.
 
 ### 6.11. Engine nhận verdict và reveal clue
 
 **Module:** `engine/game_engine.py`
 
-**Input:** `cell`, `status` do người chơi hoặc Agent gửi.
+**Input:** `cell: Coord`, `status: Status` do người chơi hoặc Agent gửi qua `submit_verdict(cell, status)`.
 
-**Output:** `VerdictResult`, public card state, và clue mới nếu verdict được
-chấp nhận.
+**Output:** `VerdictOutcome(result: VerdictResult, cell: Coord, revealed_clue: Clue | None, public_state: PublicState, message: str = "")` (từ `domain/public_state.py`).
+
+`GameEngine` đáp ứng đầy đủ interface `PublicGame` (`public_state()`, `submit_verdict()`) qua structural subtyping mà **không import `agent/`**, đồng thời cung cấp thêm `restart() -> PublicState` để khôi phục bàn chơi về trạng thái ban đầu **$KB_0$ (`initially_revealed`)**.
 
 ```mermaid
 flowchart TD
-    A[User/Agent verdict] --> B[Validate cell + status]
-    B --> C[Ask reasoning using PublicKnowledge]
-    C --> D{Status forced?}
-    D -- No, opposite forced --> E[CONTRADICTED]
-    D -- No, both possible --> F[NOT_PROVABLE]
-    D -- Yes --> G[ACCEPTED]
-    G --> H[Reveal clue for cell]
-    H --> I[Append clue + verdict to PublicKnowledge]
-    I --> J[Return updated PublicState]
+    A[User/Agent submit_verdict] --> B{Cell valid & unrevealed?}
+    B -- Invalid --> ERR[Raise InvalidCoordError]
+    B -- Already revealed --> AR[ALREADY_REVEALED]
+    B -- Unrevealed --> C[Ask reasoning on PublicKnowledge]
+    C --> D{Classification?}
+    D -- Matches status --> G[ACCEPTED]
+    D -- Opposite status --> E[CONTRADICTED]
+    D -- UNKNOWN / TIMEOUT --> F[NOT_PROVABLE]
+    D -- INCONSISTENT --> INC[Update solve_status = INCONSISTENT, result = NOT_PROVABLE]
+    G --> H[Reveal owner clue if any]
+    H --> I[Append clue + verdict to PublicState]
+    I --> J[Return VerdictOutcome]
+    AR --> J
+    E --> J
+    F --> J
+    INC --> J
 ```
 
-Engine không dùng `solution` để trả lời Agent. `solution` chỉ được dùng ở lớp
-engine cho việc kiểm tra tính đúng cuối cùng, hoặc ở loader để xác nhận puzzle
-được tạo hợp lệ. Việc một verdict có được phép reveal hay không phải dựa vào
-reasoning trên dữ liệu công khai.
+Engine không dùng `solution` để trả lời Agent hay kiểm chứng nước đi công khai. `solution` chỉ được dùng ở loader (khớp clue với solution) và kiểm tra cuối ván/oracle độc lập. Việc một verdict có được phép reveal hay không phải dựa vào reasoning trên dữ liệu công khai.
 
 ### 6.12. Hint
 
 **Module:** `agent/hint.py`
 
-**Input:** `PublicKnowledge`, trạng thái các ô đã reveal.
+**Chữ ký chính:** `suggest_hint(pk: PublicKnowledge, solver: SatSolver, deadline: float | None = None) -> Hint | None`
 
-**Output:** hint gồm ô được đề xuất, trạng thái bị ép, clue liên quan và trace
-ngắn; không trả solution ẩn.
+**Input:** `PublicKnowledge`, `solver`, optional `deadline`.
+
+**Output:** `Hint(cell: Coord, suggested_status: Status, related_clue_ids: tuple[str, ...], reason: str)` hoặc `None` nếu chưa có ô forced (hoặc quá hạn).
 
 ```mermaid
 flowchart LR
-    A[PublicKnowledge] --> B[Classify unrevealed cells]
-    B --> C[Filter CRIMINAL/INNOCENT]
+    A[PublicKnowledge] --> B[Classify unrevealed cells row-major]
+    B --> C[Find first CRIMINAL/INNOCENT]
     C --> D{Forced cell exists?}
-    D -- No --> E[No hint / UNKNOWN]
-    D -- Yes --> F[Choose row-major first forced cell]
-    F --> G[Find related revealed clues]
-    G --> H[Hint JSON]
+    D -- No --> E[Return None]
+    D -- Yes --> F[Collect active clue IDs]
+    F --> G[Return Hint]
 ```
 
-Hint chỉ được lấy từ các cell đã được entailment chứng minh. Không được chọn
-trạng thái bằng cách đọc `Puzzle.solution`.
+Hint chỉ được lấy từ ô đã được entailment chứng minh trên `PublicKnowledge`, chọn ô forced đầu tiên theo thứ tự **row-major**, không đọc `Puzzle.solution`.
 
 ### 6.13. Auto Solve và trace
 
-**Module:** `agent/logic_agent.py`, `agent/trace.py`
+**Module:** `agent/logic_agent.py`, `agent/trace.py`, `agent/ports.py`
 
-**Input:** public state ban đầu và một interface engine chỉ có các thao tác công
-khai như `get_public_state`, `submit_verdict`.
+**Input:** `game: PublicGame` (`agent/ports.py`, chỉ gồm `public_state()` và `submit_verdict(cell, status)`). `LogicAgent.__init__(self, solver: SatSolver)` tự bọc `solver` bằng `CountingSolver` nếu chưa bọc, bảo đảm mọi query của Agent (kể cả các query ra `UNKNOWN` và lệnh `check_kb_consistent` kiểm tra `SAT(KB)` ở đầu mỗi Wave) đều được đếm đầy đủ.
 
-**Output:** `Trace` gồm từng bước, số SAT call, verdict, clue được reveal, wave,
-trạng thái cuối và số liệu runtime.
+**Output:**
+- `iter_steps(game, deadline=None) -> Iterator[AutoSolveStep]`: yield `AutoSolveStep(step, public_state, trace)` sau từng bước để GUI (`GameSession.auto_solve_steps`) cập nhật real-time.
+- `run(game, deadline=None) -> SolveTrace`: tiêu thụ `iter_steps` và trả về `SolveTrace` cuối cùng với `SolveStatus` thuộc `{SOLVED, STUCK, INCONSISTENT, TIMEOUT}` (không dùng `FAILED`).
 
 ```mermaid
 flowchart TD
-    A[Initial PublicState] --> B[Build PublicKnowledge]
-    B --> C[Classify all unrevealed cells]
-    C --> D{Forced cell?}
-    D -- No --> E[FAILED or UNKNOWN]
-    D -- Yes --> F[Choose deterministic cell]
-    F --> G[Submit forced verdict to Engine]
+    A[Wave k: get PublicState] --> B[Build PublicKnowledge & CNF KB]
+    B --> C[check_kb_consistent: SAT of KB]
+    C --> D{Status?}
+    D -- UNSAT --> INC[Stop: INCONSISTENT]
+    D -- TIMEOUT --> TO[Stop: TIMEOUT]
+    D -- SAT --> E[Classify unrevealed cells row-major]
+    E --> F{Classification?}
+    F -- TIMEOUT --> TO
+    F -- Forced cell found --> G[Submit forced verdict to PublicGame]
+    F -- All UNKNOWN --> STK[Stop: STUCK]
     G --> H{ACCEPTED?}
-    H -- No --> I[Record error and stop]
-    H -- Yes --> J[Receive newly revealed clue]
-    J --> K[Record TraceStep + wave]
-    K --> L{Solved?}
-    L -- No --> B
-    L -- Yes --> M[SOLVED trace]
+    H -- No --> ERR[Record error & stop]
+    H -- Yes --> I[Append TraceStep + yield AutoSolveStep]
+    I --> J{All cells revealed?}
+    J -- No --> A
+    J -- Yes --> WIN[Stop: SOLVED]
 ```
 
-Một `TraceStep` nên có tối thiểu:
+Mỗi `TraceStep` ghi lại đầy đủ thông tin theo PDF §4.4 (kèm danh sách `sat_queries` cụ thể chứ không chỉ số đếm):
 
 ```json
 {
   "step": 3,
+  "wave": 1,
   "cell": "B2",
   "classification": "INNOCENT",
-  "sat_calls": 2,
-  "revealed_clue_id": "clue-07",
-  "wave": 1,
+  "active_clue_ids": ["c01", "c02"],
+  "sat_queries": [
+    {"coord": "B2", "assumed_status": "INNOCENT", "status": "SAT"},
+    {"coord": "B2", "assumed_status": "CRIMINAL", "status": "UNSAT"}
+  ],
+  "verdict_result": "ACCEPTED",
+  "revealed_clue_id": "c04",
   "runtime_ms": 1.8
 }
 ```
 
-### 6.14. GUI render và gọi API
+### 6.14. GUI (PyQt6) render và điều phối qua `GameSession`
 
-API có thể dùng Flask/FastAPI hoặc một adapter tương đương. Workflow không phụ
-thuộc framework; hợp đồng JSON mới là phần bắt buộc.
+Ứng dụng chạy **desktop PyQt6** (`gui/`), giao tiếp trực tiếp với **`GameSession`** (`app/session.py`) trong cùng tiến trình Python — không dựng HTTP server hay Flask/FastAPI.
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant G as GUI
-    participant A as API adapter
-    participant E as GameEngine
-    participant R as Reasoning/Agent
+    participant G as PyQt6 GUI (gui/)
+    participant S as GameSession (app/session.py)
+    participant E as GameEngine (engine/)
+    participant A as LogicAgent / Hint (agent/)
+    participant R as Reasoning / SAT
 
-    U->>G: Click ô / Hint / Auto Solve
-    G->>A: HTTP JSON request
-    A->>E: public operation
+    U->>G: Click ô / Load / Hint / Auto Solve / Restart
+    G->>S: Gọi phương thức GameSession
+    S->>E: load / submit_verdict / restart
+    S->>A: hint() hoặc auto_solve_steps()
+    A->>E: PublicGame (public_state, submit_verdict)
     E->>R: PublicKnowledge only
-    R-->>E: classification / verdict / trace
-    E-->>A: PublicState + result
-    A-->>G: JSON response
-    G-->>U: update board, card, clue, status, trace
+    R-->>E: ClassifyOutcome
+    A-->>S: Hint hoặc Iterator[AutoSolveStep]
+    E-->>S: PublicState / VerdictOutcome
+    S-->>G: PublicState / VerdictOutcome / AutoSolveStep
+    G-->>U: Cập nhật BoardView, CluePanel, Trace & Status
 ```
 
-GUI có ba vùng hiển thị:
+GUI có ba vùng hiển thị chính (kèm nhật ký/trace Auto Solve khi cần):
 
-1. `BoardView`: ô, tọa độ, tên, nghề, mặt úp/ngửa, status;
-2. `CluePanel`: danh sách clue đã reveal và highlight các ô trong `clue.cells()`;
-3. `Controls/Status`: Load, Restart, Hint, Auto Solve, verdict result và lỗi.
+1. `BoardView`: ô, tọa độ, tên, nghề, mặt úp/ngửa, status (`CRIMINAL`/`INNOCENT`);
+2. `CluePanel`: danh sách `revealed_clues` — tự render lời dẫn thân thiện từ `clue_type`, `owner` và tham số clue (không dùng trường `text` trong domain) — và highlight các ô trong `clue.cells()`;
+3. `Controls/Status`: nút **Load** (mở `QFileDialog` trỏ mặc định vào `Source/puzzles/`), **Restart**, **Hint**, **Auto Solve** (duyệt `auto_solve_steps` qua `QTimer`/`QThread`), kết quả verdict và trace/lỗi.
 
-GUI không tự tính logic. Sau mỗi response, GUI thay toàn bộ state hiển thị bằng
-`public_state` trả về để tránh state cũ và state engine bị lệch.
+GUI không tự tính logic và không import `engine`, `reasoning`, hay `sat`. Sau mỗi thao tác trên `GameSession`, GUI thay toàn bộ state hiển thị bằng `PublicState` trả về để tránh state UI và engine bị lệch.
 
-## 7. API JSON đề xuất
+## 7. Hợp đồng điều phối `GameSession` (`app/session.py`)
+
+`GameSession` là lớp facade duy nhất (do Gia Hưng phụ trách) nối PyQt6 GUI với `GameEngine` và `LogicAgent`.
 
 ### 7.1. Load puzzle
 
-```http
-POST /api/puzzles/load
-Content-Type: application/json
+```python
+session.load_puzzle(path: str | Path) -> PublicState
 ```
 
-```json
-{"path": "puzzles/3x3/p01.json"}
-```
+GUI mở `QFileDialog` mặc định vào `Source/puzzles/` (nhưng người dùng hoặc giám khảo có thể chọn bất kỳ file JSON hợp lệ nào bên ngoài). `GameSession` gọi `loader.py` kiểm tra schema + khớp `solution`, khởi tạo `GameEngine` ở trạng thái **$KB_0$ (`initially_revealed`)** và trả về `PublicState`:
 
-Response `200`:
+- `puzzle_id`: `"p01"`
+- `size`: `3` (hoặc `4`, `5`)
+- `cells`: `tuple[PublicCell, ...]` (chỉ gồm `coord`, `name`, `job`, `revealed`, `status`)
+- `revealed_clues`: `tuple[Clue, ...]` (các clue của các ô trong `initially_revealed`)
+- `solve_status`: `SolveStatus.RUNNING`
 
-```json
-{
-  "ok": true,
-  "public_state": {
-    "puzzle_id": "p01",
-    "size": 3,
-    "cells": [
-      {"cell": "A1", "name": "Abel", "job": "Detective", "revealed": false, "status": null}
-    ],
-    "revealed_clues": [],
-    "game_status": "RUNNING"
-  }
-}
-```
+Nếu file lỗi schema, đường dẫn không tồn tại hoặc clue mâu thuẫn `solution`, loader ném `InvalidPuzzleError` để GUI hiện hộp thoại lỗi rõ ràng.
 
-Response lỗi `400`:
+### 7.2. Trạng thái công khai (`PublicState`)
 
-```json
-{
-  "ok": false,
-  "error": {"code": "INVALID_PUZZLE", "message": "size must be 3, 4, or 5"}
-}
-```
-
-### 7.2. Lấy public state
-
-```http
-GET /api/state
-```
-
-Response `200` là `PublicState`. Không có `solution`, `hidden_clues` hoặc trường
-ẩn tương đương.
+Mọi dữ liệu trả ra từ `GameSession` đều đi qua `PublicState`, không bao giờ chứa `solution`, `hidden_clues` hay dữ liệu mật tương đương.
 
 ### 7.3. Nộp verdict thủ công
 
-```http
-POST /api/verdict
-Content-Type: application/json
+```python
+session.submit_verdict(cell: Coord, status: Status) -> VerdictOutcome
 ```
 
-```json
-{"cell": "B2", "status": "CRIMINAL"}
-```
+Trả về `VerdictOutcome(result, cell, revealed_clue, public_state, message)` với các nhánh `VerdictResult`:
 
-Response `200`:
+- `ACCEPTED`: verdict được chứng minh bởi `PublicKnowledge`; ô chuyển sang `revealed=True`, `status` được ghi nhận, `revealed_clue` chứa `Clue` vừa lộ (nếu có) và `public_state` đã cập nhật.
+- `NOT_PROVABLE`: chưa đủ cơ sở suy ra từ clue đã lộ (`UNKNOWN` hoặc reasoning bị `TIMEOUT`); `revealed_clue = None`, không lật ô.
+- `CONTRADICTED`: ngược với trạng thái bị ép bởi `PublicKnowledge`; `revealed_clue = None`, giữ nguyên trạng thái ô và cảnh báo người chơi.
+- `ALREADY_REVEALED`: ô đã mở trước đó (`revealed=True`); `revealed_clue = None`, không làm sai lệch state.
 
-```json
-{
-  "ok": true,
-  "result": "ACCEPTED",
-  "cell": "B2",
-  "revealed_clue": {
-    "id": "clue-07",
-    "type": "SAME",
-    "cells": ["B2", "C2"]
-  },
-  "public_state": {}
-}
-```
-
-Nếu chưa chứng minh được:
-
-```json
-{
-  "ok": true,
-  "result": "NOT_PROVABLE",
-  "cell": "B2",
-  "public_state": {}
-}
-```
-
-Nếu verdict ngược với trạng thái đang bị ép:
-
-```json
-{
-  "ok": true,
-  "result": "CONTRADICTED",
-  "cell": "B2",
-  "public_state": {}
-}
-```
-
-Hai kết quả từ chối đều không được trả clue ẩn.
+Cả hai nhánh từ chối (`NOT_PROVABLE`, `CONTRADICTED`) đều tuyệt đối không tiết lộ clue ẩn hay đáp án thật.
 
 ### 7.4. Hint
 
-```http
-POST /api/hint
+```python
+session.hint() -> Hint | None
 ```
 
-Response:
+Chuyển `PublicKnowledge.from_public_state(engine.public_state())` cho `suggest_hint(...)`:
 
-```json
-{
-  "ok": true,
-  "hint": {
-    "cell": "A2",
-    "suggested_status": "INNOCENT",
-    "reason": "ENTAILED_BY_PUBLIC_KB",
-    "related_clues": ["clue-02", "clue-05"]
-  }
-}
-```
-
-Nếu chưa có ô forced, trả `hint: null` và lý do `NO_FORCED_CELL`.
+- Nếu tìm thấy ô forced (theo thứ tự row-major), trả `Hint(cell, suggested_status, related_clue_ids, reason="ENTAILED_BY_PUBLIC_KB")`.
+- Nếu chưa có ô nào bị ép (hoặc reasoning bị timeout), trả `None` để GUI thông báo chưa thể gợi ý.
 
 ### 7.5. Auto Solve
 
-```http
-POST /api/auto-solve
-Content-Type: application/json
+```python
+session.auto_solve_steps(timeout_ms: int | None = None) -> Iterator[AutoSolveStep]
 ```
 
-```json
-{"timeout_ms": 10000, "step_mode": true}
-```
-
-Response có thể trả trace hoàn chỉnh hoặc stream từng bước tùy GUI:
-
-```json
-{
-  "ok": true,
-  "solve_status": "SOLVED",
-  "trace": [],
-  "metrics": {
-    "sat_calls": 18,
-    "decisions": 7,
-    "propagations": 31,
-    "backtracks": 2,
-    "reveal_waves": 5,
-    "runtime_ms": 12.4
-  },
-  "public_state": {}
-}
-```
-
-Timeout phải trả `TIMEOUT` và metrics hiện có; không xóa failure khỏi kết quả.
+- Chuyển `timeout_ms` thành `deadline` (`time.perf_counter() + timeout_ms / 1000.0`) nếu được đặt, rồi ủy quyền cho `LogicAgent.iter_steps(engine, deadline=deadline)`.
+- Yield trực tiếp từng `AutoSolveStep(step: TraceStep | None, public_state: PublicState, trace: SolveTrace)` cho `QTimer` hoặc `QThread` trên PyQt6 để cập nhật bảng chơi và nhật ký trace theo từng bước.
+- Kết thúc ở một trong các `SolveStatus`: `SOLVED`, `STUCK`, `INCONSISTENT`, hoặc `TIMEOUT`. Khi `TIMEOUT`, vẫn giữ nguyên `trace` và toàn bộ metrics (`total_sat_calls`, `total_decisions`, `total_propagations`, `total_backtracks`, `reveal_waves`, `total_runtime_ms`), tuyệt đối không xóa failure/timeout.
 
 ### 7.6. Restart
 
-```http
-POST /api/restart
+```python
+session.restart() -> PublicState
 ```
 
-Engine tạo public state mới từ cùng puzzle, xóa `PublicKnowledge` và reset trace.
-Không cần gửi solution từ GUI.
+Gọi `GameEngine.restart()`, khôi phục ván chơi về **$KB_0$ (`initially_revealed`)** của cùng puzzle đang nạp mà không cần GUI giữ `solution` hay đọc lại file.
 
 ## 8. Workflow thí nghiệm và output báo cáo
 
-**Module:** `experiments/runner.py`, `metrics.py`, `export.py`.
+**Module:** `experiments/runner.py`, `experiments/metrics.py`, `experiments/export.py`, `experiments/validate_puzzle.py`.
 
-Runner lần lượt load puzzle 3x3, 4x4 và stress case 5x5, chạy uniqueness,
-auto-solve với timeout và ghi cả thành công lẫn failure/timeout.
+Trước khi đưa puzzle vào benchmark, `experiments/validate_puzzle.py` kiểm tra offline tính **unique solution** và **no-guess solvable**. Sau đó `runner.py` lần lượt load các puzzle trong `Source/puzzles/` (`3x3`, `4x4`, và stress case `5x5`), chạy uniqueness, auto-solve với timeout và ghi đầy đủ cả thành công lẫn thất bại (`STUCK`, `INCONSISTENT`, `TIMEOUT`).
 
 ```mermaid
 flowchart LR
-    A[Puzzle directories] --> B[Discover JSON files]
-    B --> C[Load + validate]
-    C --> D[Run uniqueness]
-    D --> E[Run auto-solve with timeout]
-    E --> F[Collect solver + trace metrics]
-    F --> G[Keep success/failure/timeout]
-    G --> H[Export CSV / LaTeX / chart]
+    A[Source/puzzles/ JSON] --> B[Discover & validate schema]
+    B --> C[Load + check uniqueness]
+    C --> D[Run LogicAgent auto-solve with timeout]
+    D --> E[Collect CountingSolver + trace metrics]
+    E --> F[Keep SOLVED / STUCK / INCONSISTENT / TIMEOUT]
+    F --> G[Export CSV / LaTeX / chart to Source/results/]
 ```
 
 Mỗi puzzle phải có tối thiểu sáu nhóm chỉ số:
@@ -823,12 +766,12 @@ Mỗi puzzle phải có tối thiểu sáu nhóm chỉ số:
 | DPLL | decisions, propagations, backtracks |
 | Agent | số bước suy diễn, số reveal waves |
 | Runtime | thời gian encode/solve/total |
-| Outcome | `SOLVED`, `FAILED`, `TIMEOUT`, hoặc lỗi validation |
+| Outcome | `SOLVED`, `STUCK`, `INCONSISTENT`, `TIMEOUT`, hoặc lỗi validation |
 
-Output đề xuất:
+Output đặt tại `Source/results/`:
 
 ```text
-results/
+Source/results/
 ├── metrics.csv
 ├── metrics.tex
 ├── runtime_by_grid.png
@@ -841,63 +784,58 @@ results/
 
 | Chức năng | File chính | Input | Output |
 |---|---|---|---|
-| Kiểu dữ liệu/lưới | `domain/*` | size, coordinate | value object/region/error |
-| Parse clue | `clues/parser.py` | dict/JSON | `Clue` |
-| Đánh giá ngữ nghĩa | `clues/core.py`, `extensions.py` | clue + assignment | `bool` |
+| Kiểu dữ liệu/lưới/Clue ABC | `domain/*` (`types.py`, `grid.py`, `regions.py`, `clue.py`, `public_state.py`) | size, coord, region | value object / `Clue` ABC / `PublicState` / error |
+| Parse & validate clue | `clues/parser.py`, `clues/validator.py` | dict/JSON | `Clue` |
+| Đánh giá ngữ nghĩa | `clues/core.py`, `clues/extensions.py` | clue + assignment | `bool` |
 | Map biến | `encoding/varmap.py` | coord/aux request | literal ID |
-| Encode | `encoding/encoder.py` | clues | CNF + stats |
-| DPLL | `sat/dpll.py` | CNF + assumptions | `SatResult` |
-| KB | `reasoning/kb_builder.py` | public knowledge | CNF KB |
-| Entailment | `reasoning/entailment.py` | KB + cell | classification |
-| Uniqueness | `reasoning/uniqueness.py` | full CNF | unique/multiple/unsat |
-| Hint | `agent/hint.py` | public knowledge | hint/null |
-| Auto solve | `agent/logic_agent.py` | public engine interface | trace/status |
-| Verdict | `engine/game_engine.py` | cell + status | result + public state |
-| Render | `gui/board_view.py` | public state | visual board |
-| Experiment | `experiments/runner.py` | puzzle paths | metrics/results |
+| Encode | `encoding/encoder.py`, `cardinality.py`, `clue_encoders.py` | clues | `(CNF, EncodingStats)` |
+| DPLL & bộ đếm | `sat/dpll.py`, `sat/solver.py` | `CNF`, assumptions, deadline | `SatResult` + stats |
+| KB | `reasoning/knowledge.py`, `kb_builder.py` | `PublicKnowledge` | `(CNF, VarMap, EncodingStats)` |
+| Entailment | `reasoning/entailment.py` | `CNF`, `var_id`, `SatSolver` | `ClassifyOutcome` |
+| Uniqueness | `reasoning/uniqueness.py` | full CNF, `num_primary_vars`, `SatSolver` | `UniquenessOutput` |
+| Hint | `agent/hint.py` | `PublicKnowledge`, `SatSolver` | `Hint` hoặc `None` |
+| Auto solve | `agent/logic_agent.py`, `agent/ports.py`, `agent/trace.py` | `PublicGame`, deadline | `Iterator[AutoSolveStep]` / `SolveTrace` |
+| Verdict & reveal | `engine/game_engine.py`, `engine/loader.py` | `cell`, `status` | `VerdictOutcome` / `PublicState` |
+| Điều phối facade | `app/session.py` (`GameSession`) | path / action / timeout | `PublicState` / `VerdictOutcome` / `Hint` / `Iterator[AutoSolveStep]` |
+| Render PyQt6 | `gui/app.py`, `board_view.py`, `clue_panel.py`, `controls.py` | `PublicState` | PyQt6 UI |
+| Experiment & offline check | `experiments/runner.py`, `validate_puzzle.py`, `export.py` | `Source/puzzles/` | `Source/results/` (CSV, LaTeX, PNG, traces) |
 
 ## 10. Kiểm thử và Definition of Done
 
-### 10.1. Test bắt buộc
+### 10.1. Test bắt buộc (`Source/tests/`, cấu hình qua `Source/pytest.ini`)
 
-1. `test_dpll.py`: so sánh SAT/UNSAT của DPLL với brute force trên CNF nhỏ.
-2. `test_encoder_vs_eval.py`: semantic evaluator và CNF tương đương trên mọi
-   assignment phù hợp; có kiểm tra khả năng tồn tại biến phụ.
-3. `test_entailment.py`: kiểm tra ví dụ
-   `(A OR B) AND (NOT A OR B)`, trong đó `B` là Criminal và `A` là Unknown;
-   kiểm tra thêm `INCONSISTENT`.
-4. `test_uniqueness.py`: phân biệt một nghiệm, nhiều nghiệm và không có nghiệm.
-5. `test_isolation.py`: agent không import `griductive.engine` và không truy cập
-   field solution.
-6. API tests: mọi response chỉ có public fields; verdict từ chối không làm lộ
-   clue.
+Dùng chung `Source/tests/oracle.py` để kiểm chứng độc lập bằng brute-force ở quy mô nhỏ:
+
+1. `test_dpll.py`: so sánh SAT/UNSAT của `DPLLSolver` với brute force trên CNF nhỏ (≤ 16 biến), kèm test `TIMEOUT`.
+2. `test_encoder_vs_eval.py`: semantic `clue.evaluate()` và CNF tương đương trên mọi assignment biến chính ($N \le 4$), kiểm tra khả năng mở rộng biến phụ (cả nhánh direct và sequential counter fallback).
+3. `test_entailment.py`: kiểm tra ví dụ `(A OR B) AND (NOT A OR B)` (`B` = `CRIMINAL`, `A` = `UNKNOWN`), đối chiếu 2-query với oracle brute-force trên board nhỏ và nhánh `INCONSISTENT` / `TIMEOUT`.
+4. `test_uniqueness.py`: phân biệt `UNIQUE`, `MULTIPLE`, `UNSAT` (chỉ block biến chính `1..num_primary_vars`, không block biến phụ) và `TIMEOUT`.
+5. `test_isolation.py`: `agent/` không import `griductive.engine`, `griductive.gui`, `griductive.app` (kiểm tra AST/module imports) và chạy `LogicAgent` với dynamic **`MockGame`** để xác nhận Agent không thể chạm vào `solution` hay clue ẩn.
+6. PublicState & Session tests: mọi `PublicState` và `VerdictOutcome` từ `GameEngine` / `GameSession` chỉ chứa public fields; `NOT_PROVABLE`, `CONTRADICTED`, `ALREADY_REVEALED` không làm lộ clue ẩn; `restart()` khôi phục về đúng $KB_0$ (`initially_revealed`).
 
 ### 10.2. Definition of Done cho từng task
 
 - Hàm/class có type hints và docstrings.
-- Có unit test cho nhánh thành công và lỗi.
+- Có unit test cho nhánh thành công và lỗi (chạy `pytest` trong `Source/`).
 - Không dùng global state để truyền dữ liệu giữa GUI và solver.
 - Không vi phạm dependency một chiều.
-- Có thống kê cần thiết nếu task thuộc encoder, DPLL, reasoning, agent hoặc
-  experiments.
-- Đã kiểm tra public response không chứa `solution`/hidden clue.
+- Có thống kê cần thiết nếu task thuộc encoder, DPLL, reasoning, agent hoặc experiments.
+- Đã kiểm tra `PublicState` / `VerdictOutcome` không chứa `solution` hay hidden clue.
 - PR chỉ chứa một nhiệm vụ và dùng Conventional Commit theo `Process.md`.
 
 ## 11. Trình tự triển khai khuyến nghị
 
 ```mermaid
 flowchart LR
-    A[Domain types + grid] --> B[Clues + parser + evaluator]
-    B --> C[CNF + VarMap + cardinality]
-    C --> D[DPLL + stats]
+    A[Domain types + grid + Clue ABC] --> B[Clues + parser + evaluator]
+    B --> C[CNF + SatSolver + VarMap + cardinality]
+    C --> D[DPLL + CountingSolver]
     D --> E[Reasoning + uniqueness]
-    E --> F[Engine + public state]
+    E --> F[Engine + GameSession]
     F --> G[Agent + trace + hint]
-    G --> H[GUI/API adapter]
-    H --> I[Experiments + report tables]
+    G --> H[PyQt6 GUI]
+    H --> I[Experiments + validate_puzzle + report tables]
 ```
 
-Mỗi mốc nên chạy test trước khi chuyển sang tầng tiếp theo. Đặc biệt phải chốt
-schema JSON, `VarMap` và API public state trước khi làm GUI để tránh thay đổi
-ngược gây lỗi tích hợp.
+Mỗi mốc nên chạy test trước khi chuyển sang tầng tiếp theo. Đặc biệt phải chốt schema JSON, `VarMap`, `PublicState` và hợp đồng `GameSession` trước khi làm GUI để tránh thay đổi ngược gây lỗi tích hợp.
 
