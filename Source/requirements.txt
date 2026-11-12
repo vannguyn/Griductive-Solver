@@ -1,3 +1,3 @@
-# Add runtime dependencies here when the implementation is selected.
-# Example for the proposed web GUI:
-# Flask>=3.0,<4.0
+# Runtime and test dependencies for Griductive Solver (install inside .venv)
+PyQt6>=6.6
+pytest>=8.0
