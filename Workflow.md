@@ -1,7 +1,7 @@
 # Griductive Solver - Workflow, Hợp đồng Biên và Luồng Xử lý
 
 Tài liệu này mô tả workflow kỹ thuật được thống nhất từ `Analysis_Report.md`,
-`Process.md`, [Audit_Report.md](Audit_Report.md) và yêu cầu trong `AI - Project 2.pdf`.
+`Process.md`, `Audit_Report.md` (nhánh `docs/audit-team-lead`) và yêu cầu trong `AI - Project 2.pdf`.
 Mục tiêu là thống nhất luồng dữ liệu giữa các tầng, hợp đồng biên giữa 5 thành viên
 và cách giao diện Desktop `PyQt6` gọi qua `GameSession` (`app/session.py`).
 
@@ -356,7 +356,7 @@ trace, DIMACS, báo cáo và test có kết quả tái lập.
 
 ```mermaid
 flowchart LR
-    A[Clue list] --> B[Dispatch by clue.type]
+    A[Clue list] --> B[Dispatch by clue.clue_type]
     B --> C{Binary or cardinality?}
     C -- FACT/SAME/DIFFERENT --> D[Emit direct clauses]
     C -- COUNT --> E[Cardinality encoder]
@@ -556,10 +556,14 @@ flowchart TD
     D -- Matches status --> G[ACCEPTED]
     D -- Opposite status --> E[CONTRADICTED]
     D -- UNKNOWN / TIMEOUT --> F[NOT_PROVABLE]
-    D -- INCONSISTENT --> INC[Update solve_status = INCONSISTENT]
+    D -- INCONSISTENT --> INC[Update solve_status = INCONSISTENT, result = NOT_PROVABLE]
     G --> H[Reveal owner clue if any]
     H --> I[Append clue + verdict to PublicState]
     I --> J[Return VerdictOutcome]
+    AR --> J
+    E --> J
+    F --> J
+    INC --> J
 ```
 
 Engine không dùng `solution` để trả lời Agent hay kiểm chứng nước đi công khai. `solution` chỉ được dùng ở loader (khớp clue với solution) và kiểm tra cuối ván/oracle độc lập. Việc một verdict có được phép reveal hay không phải dựa vào reasoning trên dữ liệu công khai.
@@ -626,8 +630,8 @@ Mỗi `TraceStep` ghi lại đầy đủ thông tin theo PDF §4.4 (kèm danh s�
   "classification": "INNOCENT",
   "active_clue_ids": ["c01", "c02"],
   "sat_queries": [
-    {"coord": "B2", "assumed_status": "CRIMINAL", "status": "SAT"},
-    {"coord": "B2", "assumed_status": "INNOCENT", "status": "UNSAT"}
+    {"coord": "B2", "assumed_status": "INNOCENT", "status": "SAT"},
+    {"coord": "B2", "assumed_status": "CRIMINAL", "status": "UNSAT"}
   ],
   "verdict_result": "ACCEPTED",
   "revealed_clue_id": "c04",
@@ -789,11 +793,11 @@ Source/results/
 | KB | `reasoning/knowledge.py`, `kb_builder.py` | `PublicKnowledge` | `(CNF, VarMap, EncodingStats)` |
 | Entailment | `reasoning/entailment.py` | `CNF`, `var_id`, `SatSolver` | `ClassifyOutcome` |
 | Uniqueness | `reasoning/uniqueness.py` | full CNF, `num_primary_vars`, `SatSolver` | `UniquenessOutput` |
-| Hint | `agent/hint.py` | `PublicKnowledge`, `SatSolver` | `Hint | None` |
+| Hint | `agent/hint.py` | `PublicKnowledge`, `SatSolver` | `Hint` hoặc `None` |
 | Auto solve | `agent/logic_agent.py`, `agent/ports.py`, `agent/trace.py` | `PublicGame`, deadline | `Iterator[AutoSolveStep]` / `SolveTrace` |
 | Verdict & reveal | `engine/game_engine.py`, `engine/loader.py` | `cell`, `status` | `VerdictOutcome` / `PublicState` |
 | Điều phối facade | `app/session.py` (`GameSession`) | path / action / timeout | `PublicState` / `VerdictOutcome` / `Hint` / `Iterator[AutoSolveStep]` |
-| Render PyQt6 | `gui/main_window.py`, `board_view.py`, `clue_panel.py`, `controls.py` | `PublicState` | PyQt6 UI |
+| Render PyQt6 | `gui/app.py`, `board_view.py`, `clue_panel.py`, `controls.py` | `PublicState` | PyQt6 UI |
 | Experiment & offline check | `experiments/runner.py`, `validate_puzzle.py`, `export.py` | `Source/puzzles/` | `Source/results/` (CSV, LaTeX, PNG, traces) |
 
 ## 10. Kiểm thử và Definition of Done
