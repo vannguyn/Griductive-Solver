@@ -17,9 +17,8 @@ Output:
 Người phụ trách: Ngọc Quang (Agent, Experiments & Reviewer 2).
 """
 
-import pytest
 from griductive.domain.types import Classification
-from griductive.reasoning.entailment import classify
+from griductive.reasoning.entailment import check_kb_consistent, classify
 from griductive.sat.cnf import CNF, SatResult, SatStatus
 from griductive.sat.dpll import DPLLSolver
 
@@ -59,3 +58,11 @@ def test_entailment_timeout_handling() -> None:
     cnf = CNF(num_vars=1, clauses=[[1]])
     outcome = classify(cnf, var_id=1, solver=DummyTimeoutSolver())
     assert outcome.classification == Classification.TIMEOUT
+
+
+def test_kb_inconsistent() -> None:
+    """Kiểm tra check_kb_consistent khi KB mâu thuẫn nội tại: [1] và [-1]."""
+    cnf = CNF(num_vars=1, clauses=[[1], [-1]])
+    solver = DPLLSolver()
+    status = check_kb_consistent(cnf, solver=solver)
+    assert status == SatStatus.UNSAT

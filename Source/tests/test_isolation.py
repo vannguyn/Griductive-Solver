@@ -22,7 +22,14 @@ Người phụ trách: Ngọc Quang (Agent, Experiments & Reviewer 2).
 
 import ast
 from pathlib import Path
-import pytest
+
+from griductive.agent.logic_agent import LogicAgent
+from griductive.agent.ports import PublicGame
+from griductive.clues.core import FactClue
+from griductive.domain.grid import all_coords
+from griductive.domain.public_state import PublicCell, PublicState, VerdictOutcome
+from griductive.domain.types import SolveStatus, Status, VerdictResult
+from griductive.sat.dpll import DPLLSolver
 
 
 def get_imported_modules(file_path: Path) -> set[str]:
@@ -65,3 +72,70 @@ def test_sat_is_pure_integer() -> None:
             assert not mod.startswith("griductive.clues"), f"sat/ không được import clues: {py_file.name}"
             assert not mod.startswith("griductive.agent"), f"sat/ không được import agent: {py_file.name}"
             assert not mod.startswith("griductive.engine"), f"sat/ không được import engine: {py_file.name}"
+
+
+class StrictMockGame(PublicGame):
+    """Giả lập GameEngine có bẫy để phát hiện việc đọc trộm hidden attributes."""
+
+    def __init__(self) -> None:
+        self.puzzle_id = "mock-isolation-test"
+        self.size = 2
+        # Thuộc tính ẩn bị cấm truy cập
+        self.hidden_solution = {"A1": Status.CRIMINAL, "B1": Status.INNOCENT, "A2": Status.INNOCENT, "B2": Status.CRIMINAL}
+        self.secret_unrevealed_clues = {"clue-secret": "DO_NOT_READ"}
+
+        # Cho sẵn clue A1 là Criminal
+        self.revealed_clues = [FactClue("clue-1", "A1", "A1", Status.CRIMINAL)]
+        self.cell_map = {
+            c: PublicCell(coord=c, name=f"Char_{c}", job="Civilian", revealed=False, status=None)
+            for c in all_coords(2)
+        }
+
+    def __getattribute__(self, name: str):
+        # Bẫy truy cập: nếu chạm vào hidden_solution hay secret_unrevealed_clues sẽ nổ lỗi
+        if name in ("hidden_solution", "secret_unrevealed_clues", "solution"):
+            raise AssertionError(f"Rule 1 VIOLATION: Agent cố tình đọc thuộc tính ẩn '{name}'!")
+        return super().__getattribute__(name)
+
+    def public_state(self) -> PublicState:
+        return PublicState(
+            puzzle_id=self.puzzle_id,
+            size=self.size,
+            cells=tuple(self.cell_map[c] for c in all_coords(2)),
+            revealed_clues=tuple(self.revealed_clues),
+            solve_status=SolveStatus.RUNNING,
+        )
+
+    def submit_verdict(self, cell: str, status: Status) -> VerdictOutcome:
+        # Nếu verdict là A1 CRIMINAL thì chấp nhận
+        if cell == "A1" and status == Status.CRIMINAL:
+            self.cell_map[cell] = PublicCell(
+                coord=cell, name=f"Char_{cell}", job="Civilian", revealed=True, status=status
+            )
+            return VerdictOutcome(
+                result=VerdictResult.ACCEPTED,
+                cell=cell,
+                revealed_clue=self.revealed_clues[0],
+                public_state=self.public_state(),
+                message="Accepted",
+            )
+        return VerdictOutcome(
+            result=VerdictResult.NOT_PROVABLE,
+            cell=cell,
+            revealed_clue=None,
+            public_state=self.public_state(),
+            message="Not provable",
+        )
+
+
+def test_mock_game_dynamic_isolation() -> None:
+    """Bảo đảm LogicAgent khi chạy hoàn toàn không chạm vào hidden solution của game."""
+    game = StrictMockGame()
+    agent = LogicAgent(solver=DPLLSolver())
+
+    # Chạy 1 wave: agent phải đọc public_state, tìm thấy A1 là forced CRIMINAL và nộp verdict
+    trace = agent.run(game)
+    # Khẳng định agent đã nộp verdict A1 thành công và không bị dính bẫy __getattribute__
+    assert len(trace.steps) >= 1
+    assert trace.steps[0].cell == "A1"
+    assert trace.steps[0].verdict_result == VerdictResult.ACCEPTED
