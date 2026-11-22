@@ -76,7 +76,8 @@ def test_oracle_cross_check_3x3_puzzles() -> None:
     from griductive.clues.core import FactClue
     from griductive.domain.types import Status
 
-    puzzles = sorted(Path("Source/puzzles/3x3").glob("*.json"))
+    puzzles_dir = Path(__file__).resolve().parent.parent / "puzzles" / "3x3"
+    puzzles = sorted(puzzles_dir.glob("*.json"))
     assert len(puzzles) >= 3
     for p_path in puzzles:
         p = load_puzzle_file(p_path)

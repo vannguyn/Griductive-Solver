@@ -162,6 +162,11 @@ class LogicAgent:
                 trace.solve_status = SolveStatus.STUCK
                 break
 
+        trace.total_sat_calls = self.solver.calls
+        trace.total_decisions = self.solver.total_decisions
+        trace.total_propagations = self.solver.total_propagations
+        trace.total_backtracks = self.solver.total_backtracks
+        trace.reveal_waves = wave_counter
         trace.total_runtime_ms = (time.perf_counter() - start_time) * 1000.0
         yield AutoSolveStep(step=None, public_state=game.public_state(), trace=trace)
 

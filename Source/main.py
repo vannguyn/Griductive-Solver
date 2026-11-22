@@ -41,6 +41,10 @@ def main() -> int:
     """Khởi động ứng dụng Griductive Solver."""
     args = parse_arguments()
 
+    if args.validate and not args.puzzle:
+        print("Lỗi: Cờ --validate yêu cầu truyền kèm đường dẫn puzzle qua --puzzle <path>.")
+        return 1
+
     if args.validate and args.puzzle:
         from griductive.experiments.validate_puzzle import validate_puzzle_file
         valid, msg = validate_puzzle_file(args.puzzle)
@@ -52,8 +56,9 @@ def main() -> int:
         from griductive.experiments.runner import run_all_benchmarks
         from griductive.experiments.export import export_to_csv, export_to_latex, plot_runtime_chart
 
-        puzzles_dir = Path("Source/puzzles")
-        results_dir = Path("Source/results")
+        base_dir = Path(__file__).resolve().parent
+        puzzles_dir = base_dir / "puzzles"
+        results_dir = base_dir / "results"
         results_dir.mkdir(parents=True, exist_ok=True)
 
         print("=== BẮT ĐẦU CHẠY THÍ NGHIỆM BENCHMARK ===")

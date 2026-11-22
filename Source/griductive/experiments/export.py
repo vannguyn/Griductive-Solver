@@ -180,7 +180,7 @@ def plot_runtime_chart(metrics: list[PuzzleMetrics], output_path: str | Path) ->
         plt.savefig(p)
         plt.close()
         return
-    except ImportError:
+    except Exception:
         pass
 
     # 2. Xuất SVG vector chuẩn không phụ thuộc thư viện ngoài

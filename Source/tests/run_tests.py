@@ -11,6 +11,13 @@ import traceback
 from pathlib import Path
 from types import ModuleType
 
+# Tự động bootstrap sys.path để chạy từ bất kỳ thư mục nào
+this_dir = Path(__file__).resolve().parent
+source_dir = this_dir.parent
+for p in (str(source_dir), str(this_dir)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
 # Cung cấp fallback shim cho pytest nếu máy chưa cài
 if "pytest" not in sys.modules:
     try:
@@ -77,6 +84,7 @@ def run_all_tests() -> int:
 
     total_tests = 0
     passed_tests = 0
+    skipped_tests = 0
     failed_tests = 0
     failures: list[tuple[str, str, str]] = []
 
@@ -106,7 +114,7 @@ def run_all_tests() -> int:
                     fn()
                 else:
                     print(f"  [SKIP] {name} (parametrized)")
-                    passed_tests += 1
+                    skipped_tests += 1
                     continue
 
                 print(f"  [PASS] {name}")
@@ -123,7 +131,7 @@ def run_all_tests() -> int:
 
     elapsed = (time.perf_counter() - t0) * 1000.0
     print("\n" + "=" * 60)
-    print(f"SUMMARY: {passed_tests}/{total_tests} PASSED in {elapsed:.1f} ms")
+    print(f"SUMMARY: {passed_tests} PASSED, {skipped_tests} SKIPPED, {failed_tests} FAILED / {total_tests} TOTAL in {elapsed:.1f} ms")
     if failed_tests > 0:
         print(f"FAILED: {failed_tests} tests failed:")
         for mod, name, err in failures:

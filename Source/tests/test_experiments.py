@@ -19,7 +19,7 @@ from griductive.domain.types import SolveStatus
 
 def test_benchmark_runner_on_example_puzzle() -> None:
     """Kiểm tra benchmark runner trên puzzle mẫu 3x3."""
-    puzzle_path = Path("Source/puzzles/json_example.json")
+    puzzle_path = Path(__file__).resolve().parent.parent / "puzzles" / "json_example.json"
     metrics = run_benchmark_on_puzzle(puzzle_path)
 
     # 1. Encoding
@@ -38,7 +38,7 @@ def test_benchmark_runner_on_example_puzzle() -> None:
 
 def test_export_utilities() -> None:
     """Kiểm tra việc xuất CSV, LaTeX và biểu đồ SVG."""
-    puzzle_path = Path("Source/puzzles/json_example.json")
+    puzzle_path = Path(__file__).resolve().parent.parent / "puzzles" / "json_example.json"
     metrics = [run_benchmark_on_puzzle(puzzle_path)]
 
     with tempfile.TemporaryDirectory() as tmp_dir:
