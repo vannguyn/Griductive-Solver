@@ -31,6 +31,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--validate", action="store_true", help="Kiểm tra tính duy nhất (uniqueness) và khả năng giải được."
     )
+    parser.add_argument(
+        "--benchmark", action="store_true", help="Chạy toàn bộ thí nghiệm benchmark trên thư mục puzzles/ và xuất kết quả."
+    )
     return parser.parse_args()
 
 
@@ -43,6 +46,33 @@ def main() -> int:
         valid, msg = validate_puzzle_file(args.puzzle)
         print(f"Validation result for {args.puzzle}: {'VALID' if valid else 'INVALID'}\n{msg}")
         return 0 if valid else 1
+
+    if args.benchmark:
+        from pathlib import Path
+        from griductive.experiments.runner import run_all_benchmarks
+        from griductive.experiments.export import export_to_csv, export_to_latex, plot_runtime_chart
+
+        puzzles_dir = Path("Source/puzzles")
+        results_dir = Path("Source/results")
+        results_dir.mkdir(parents=True, exist_ok=True)
+
+        print("=== BẮT ĐẦU CHẠY THÍ NGHIỆM BENCHMARK ===")
+        metrics = run_all_benchmarks(puzzles_dir)
+        print(f"Đã hoàn thành {len(metrics)} lượt chạy puzzle.")
+
+        csv_path = results_dir / "metrics.csv"
+        tex_path = results_dir / "metrics.tex"
+        chart_path = results_dir / "runtime_by_grid.svg"
+
+        export_to_csv(metrics, csv_path)
+        export_to_latex(metrics, tex_path)
+        plot_runtime_chart(metrics, chart_path)
+
+        print(f"Đã xuất toàn bộ kết quả thành công:")
+        print(f"  - CSV: {csv_path}")
+        print(f"  - LaTeX: {tex_path}")
+        print(f"  - Chart: {chart_path}")
+        return 0
 
     if args.cli:
         print("Chế độ CLI chưa kích hoạt. Vui lòng chạy GUI hoặc dùng --validate.")

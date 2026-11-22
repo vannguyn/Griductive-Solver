@@ -62,6 +62,7 @@ import test_entailment
 import oracle
 import test_dpll
 import test_uniqueness
+import test_experiments
 
 
 def run_all_tests() -> int:
@@ -71,6 +72,7 @@ def run_all_tests() -> int:
         ("oracle", oracle),
         ("test_dpll", test_dpll),
         ("test_uniqueness", test_uniqueness),
+        ("test_experiments", test_experiments),
     ]
 
     total_tests = 0
