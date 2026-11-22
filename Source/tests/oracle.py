@@ -68,3 +68,25 @@ def test_oracle_matches_ground_truth() -> None:
         assert sol["A1"] is True
         assert sol["B1"] is True
 
+
+def test_oracle_cross_check_3x3_puzzles() -> None:
+    """Đối chiếu chéo nghiệm của BruteForceOracle với toàn bộ puzzle 3x3."""
+    from pathlib import Path
+    from griductive.engine.loader import load_puzzle_file
+    from griductive.clues.core import FactClue
+    from griductive.domain.types import Status
+
+    puzzles = sorted(Path("Source/puzzles/3x3").glob("*.json"))
+    assert len(puzzles) >= 3
+    for p_path in puzzles:
+        p = load_puzzle_file(p_path)
+        init_clues = [
+            FactClue(f"init-{c}", c, c, Status.CRIMINAL if p.solution[c] else Status.INNOCENT)
+            for c in p.initially_revealed
+        ]
+        all_clues = list(p.clues.values()) + init_clues
+        oracle = BruteForceOracle(p.size, all_clues)
+        sols = oracle.find_all_solutions()
+        assert len(sols) == 1, f"{p_path.name}: Oracle tìm thấy {len(sols)} nghiệm"
+        assert sols[0] == p.solution, f"{p_path.name}: Nghiệm Oracle khác solution của puzzle"
+
