@@ -1,0 +1,366 @@
+{
+  "id": "puzzle-5x5-01",
+  "size": 5,
+  "initially_revealed": [
+    "A1"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Abel",
+      "job": "Detective"
+    },
+    {
+      "cell": "B1",
+      "name": "Bea",
+      "job": "Analyst"
+    },
+    {
+      "cell": "C1",
+      "name": "Cora",
+      "job": "Journalist"
+    },
+    {
+      "cell": "D1",
+      "name": "Derek",
+      "job": "Guard"
+    },
+    {
+      "cell": "E1",
+      "name": "Eva",
+      "job": "Officer"
+    },
+    {
+      "cell": "A2",
+      "name": "Dara",
+      "job": "Engineer"
+    },
+    {
+      "cell": "B2",
+      "name": "Eli",
+      "job": "Doctor"
+    },
+    {
+      "cell": "C2",
+      "name": "Faye",
+      "job": "Teacher"
+    },
+    {
+      "cell": "D2",
+      "name": "Grant",
+      "job": "Clerk"
+    },
+    {
+      "cell": "E2",
+      "name": "Hannah",
+      "job": "Guard"
+    },
+    {
+      "cell": "A3",
+      "name": "Gus",
+      "job": "Designer"
+    },
+    {
+      "cell": "B3",
+      "name": "Hana",
+      "job": "Lawyer"
+    },
+    {
+      "cell": "C3",
+      "name": "Iris",
+      "job": "Pilot"
+    },
+    {
+      "cell": "D3",
+      "name": "Jonas",
+      "job": "Farmer"
+    },
+    {
+      "cell": "E3",
+      "name": "Karl",
+      "job": "Painter"
+    },
+    {
+      "cell": "A4",
+      "name": "Mara",
+      "job": "Astronaut"
+    },
+    {
+      "cell": "B4",
+      "name": "Noah",
+      "job": "Clerk"
+    },
+    {
+      "cell": "C4",
+      "name": "Owen",
+      "job": "Clerk"
+    },
+    {
+      "cell": "D4",
+      "name": "Priya",
+      "job": "Farmer"
+    },
+    {
+      "cell": "E4",
+      "name": "Quinn",
+      "job": "Scientist"
+    },
+    {
+      "cell": "A5",
+      "name": "Roy",
+      "job": "Guard"
+    },
+    {
+      "cell": "B5",
+      "name": "Sophia",
+      "job": "Painter"
+    },
+    {
+      "cell": "C5",
+      "name": "Tom",
+      "job": "Farmer"
+    },
+    {
+      "cell": "D5",
+      "name": "Uma",
+      "job": "Chef"
+    },
+    {
+      "cell": "E5",
+      "name": "Vince",
+      "job": "Tailor"
+    }
+  ],
+  "solution": {
+    "A1": true,
+    "B1": false,
+    "C1": true,
+    "D1": false,
+    "E1": true,
+    "A2": false,
+    "B2": true,
+    "C2": false,
+    "D2": true,
+    "E2": false,
+    "A3": true,
+    "B3": false,
+    "C3": true,
+    "D3": false,
+    "E3": true,
+    "A4": false,
+    "B4": true,
+    "C4": false,
+    "D4": true,
+    "E4": false,
+    "A5": true,
+    "B5": false,
+    "C5": true,
+    "D5": false,
+    "E5": true
+  },
+  "clues": [
+    {
+      "id": "c_a1",
+      "owner": "A1",
+      "type": "DIFFERENT",
+      "hint": "A1 diff status from B1",
+      "cell_a": "A1",
+      "cell_b": "B1"
+    },
+    {
+      "id": "c_b1",
+      "owner": "B1",
+      "type": "DIFFERENT",
+      "hint": "B1 diff status from C1",
+      "cell_a": "B1",
+      "cell_b": "C1"
+    },
+    {
+      "id": "c_c1",
+      "owner": "C1",
+      "type": "DIFFERENT",
+      "hint": "C1 diff status from D1",
+      "cell_a": "C1",
+      "cell_b": "D1"
+    },
+    {
+      "id": "c_d1",
+      "owner": "D1",
+      "type": "DIFFERENT",
+      "hint": "D1 diff status from E1",
+      "cell_a": "D1",
+      "cell_b": "E1"
+    },
+    {
+      "id": "c_e1",
+      "owner": "E1",
+      "type": "DIFFERENT",
+      "hint": "E1 diff status from A2",
+      "cell_a": "E1",
+      "cell_b": "A2"
+    },
+    {
+      "id": "c_a2",
+      "owner": "A2",
+      "type": "DIFFERENT",
+      "hint": "A2 diff status from B2",
+      "cell_a": "A2",
+      "cell_b": "B2"
+    },
+    {
+      "id": "c_b2",
+      "owner": "B2",
+      "type": "DIFFERENT",
+      "hint": "B2 diff status from C2",
+      "cell_a": "B2",
+      "cell_b": "C2"
+    },
+    {
+      "id": "c_c2",
+      "owner": "C2",
+      "type": "DIFFERENT",
+      "hint": "C2 diff status from D2",
+      "cell_a": "C2",
+      "cell_b": "D2"
+    },
+    {
+      "id": "c_d2",
+      "owner": "D2",
+      "type": "DIFFERENT",
+      "hint": "D2 diff status from E2",
+      "cell_a": "D2",
+      "cell_b": "E2"
+    },
+    {
+      "id": "c_e2",
+      "owner": "E2",
+      "type": "DIFFERENT",
+      "hint": "E2 diff status from A3",
+      "cell_a": "E2",
+      "cell_b": "A3"
+    },
+    {
+      "id": "c_a3",
+      "owner": "A3",
+      "type": "DIFFERENT",
+      "hint": "A3 diff status from B3",
+      "cell_a": "A3",
+      "cell_b": "B3"
+    },
+    {
+      "id": "c_b3",
+      "owner": "B3",
+      "type": "DIFFERENT",
+      "hint": "B3 diff status from C3",
+      "cell_a": "B3",
+      "cell_b": "C3"
+    },
+    {
+      "id": "c_c3",
+      "owner": "C3",
+      "type": "DIFFERENT",
+      "hint": "C3 diff status from D3",
+      "cell_a": "C3",
+      "cell_b": "D3"
+    },
+    {
+      "id": "c_d3",
+      "owner": "D3",
+      "type": "DIFFERENT",
+      "hint": "D3 diff status from E3",
+      "cell_a": "D3",
+      "cell_b": "E3"
+    },
+    {
+      "id": "c_e3",
+      "owner": "E3",
+      "type": "DIFFERENT",
+      "hint": "E3 diff status from A4",
+      "cell_a": "E3",
+      "cell_b": "A4"
+    },
+    {
+      "id": "c_a4",
+      "owner": "A4",
+      "type": "DIFFERENT",
+      "hint": "A4 diff status from B4",
+      "cell_a": "A4",
+      "cell_b": "B4"
+    },
+    {
+      "id": "c_b4",
+      "owner": "B4",
+      "type": "DIFFERENT",
+      "hint": "B4 diff status from C4",
+      "cell_a": "B4",
+      "cell_b": "C4"
+    },
+    {
+      "id": "c_c4",
+      "owner": "C4",
+      "type": "DIFFERENT",
+      "hint": "C4 diff status from D4",
+      "cell_a": "C4",
+      "cell_b": "D4"
+    },
+    {
+      "id": "c_d4",
+      "owner": "D4",
+      "type": "DIFFERENT",
+      "hint": "D4 diff status from E4",
+      "cell_a": "D4",
+      "cell_b": "E4"
+    },
+    {
+      "id": "c_e4",
+      "owner": "E4",
+      "type": "DIFFERENT",
+      "hint": "E4 diff status from A5",
+      "cell_a": "E4",
+      "cell_b": "A5"
+    },
+    {
+      "id": "c_a5",
+      "owner": "A5",
+      "type": "DIFFERENT",
+      "hint": "A5 diff status from B5",
+      "cell_a": "A5",
+      "cell_b": "B5"
+    },
+    {
+      "id": "c_b5",
+      "owner": "B5",
+      "type": "DIFFERENT",
+      "hint": "B5 diff status from C5",
+      "cell_a": "B5",
+      "cell_b": "C5"
+    },
+    {
+      "id": "c_c5",
+      "owner": "C5",
+      "type": "DIFFERENT",
+      "hint": "C5 diff status from D5",
+      "cell_a": "C5",
+      "cell_b": "D5"
+    },
+    {
+      "id": "c_d5",
+      "owner": "D5",
+      "type": "DIFFERENT",
+      "hint": "D5 diff status from E5",
+      "cell_a": "D5",
+      "cell_b": "E5"
+    },
+    {
+      "id": "c_e5",
+      "owner": "E5",
+      "type": "EXACTLY",
+      "hint": "Row 5 has exactly 3 criminals",
+      "region": {
+        "kind": "row",
+        "index": 5
+      },
+      "k": 3
+    }
+  ]
+}

@@ -1,0 +1,240 @@
+{
+  "id": "puzzle-4x4-01",
+  "size": 4,
+  "initially_revealed": [
+    "A1"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Abel",
+      "job": "Detective"
+    },
+    {
+      "cell": "B1",
+      "name": "Bea",
+      "job": "Analyst"
+    },
+    {
+      "cell": "C1",
+      "name": "Cora",
+      "job": "Journalist"
+    },
+    {
+      "cell": "D1",
+      "name": "Derek",
+      "job": "Guard"
+    },
+    {
+      "cell": "A2",
+      "name": "Dara",
+      "job": "Engineer"
+    },
+    {
+      "cell": "B2",
+      "name": "Eli",
+      "job": "Doctor"
+    },
+    {
+      "cell": "C2",
+      "name": "Faye",
+      "job": "Teacher"
+    },
+    {
+      "cell": "D2",
+      "name": "Grant",
+      "job": "Clerk"
+    },
+    {
+      "cell": "A3",
+      "name": "Gus",
+      "job": "Designer"
+    },
+    {
+      "cell": "B3",
+      "name": "Hana",
+      "job": "Lawyer"
+    },
+    {
+      "cell": "C3",
+      "name": "Iris",
+      "job": "Pilot"
+    },
+    {
+      "cell": "D3",
+      "name": "Jonas",
+      "job": "Farmer"
+    },
+    {
+      "cell": "A4",
+      "name": "Mara",
+      "job": "Astronaut"
+    },
+    {
+      "cell": "B4",
+      "name": "Noah",
+      "job": "Clerk"
+    },
+    {
+      "cell": "C4",
+      "name": "Owen",
+      "job": "Clerk"
+    },
+    {
+      "cell": "D4",
+      "name": "Priya",
+      "job": "Farmer"
+    }
+  ],
+  "solution": {
+    "A1": true,
+    "B1": false,
+    "C1": true,
+    "D1": false,
+    "A2": false,
+    "B2": true,
+    "C2": false,
+    "D2": true,
+    "A3": true,
+    "B3": true,
+    "C3": false,
+    "D3": false,
+    "A4": false,
+    "B4": false,
+    "C4": true,
+    "D4": true
+  },
+  "clues": [
+    {
+      "id": "c_a1",
+      "owner": "A1",
+      "type": "FACT",
+      "hint": "B1 is innocent",
+      "target_cell": "B1",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_b1",
+      "owner": "B1",
+      "type": "FACT",
+      "hint": "C1 is criminal",
+      "target_cell": "C1",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_c1",
+      "owner": "C1",
+      "type": "FACT",
+      "hint": "D1 is innocent",
+      "target_cell": "D1",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_d1",
+      "owner": "D1",
+      "type": "FACT",
+      "hint": "A2 is innocent",
+      "target_cell": "A2",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_a2",
+      "owner": "A2",
+      "type": "FACT",
+      "hint": "B2 is criminal",
+      "target_cell": "B2",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_b2",
+      "owner": "B2",
+      "type": "FACT",
+      "hint": "C2 is innocent",
+      "target_cell": "C2",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_c2",
+      "owner": "C2",
+      "type": "FACT",
+      "hint": "D2 is criminal",
+      "target_cell": "D2",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_d2",
+      "owner": "D2",
+      "type": "FACT",
+      "hint": "A3 is criminal",
+      "target_cell": "A3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_a3",
+      "owner": "A3",
+      "type": "FACT",
+      "hint": "B3 is criminal",
+      "target_cell": "B3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_b3",
+      "owner": "B3",
+      "type": "FACT",
+      "hint": "C3 is innocent",
+      "target_cell": "C3",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_c3",
+      "owner": "C3",
+      "type": "FACT",
+      "hint": "D3 is innocent",
+      "target_cell": "D3",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_d3",
+      "owner": "D3",
+      "type": "FACT",
+      "hint": "A4 is innocent",
+      "target_cell": "A4",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_a4",
+      "owner": "A4",
+      "type": "FACT",
+      "hint": "B4 is innocent",
+      "target_cell": "B4",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_b4",
+      "owner": "B4",
+      "type": "FACT",
+      "hint": "C4 is criminal",
+      "target_cell": "C4",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_c4",
+      "owner": "C4",
+      "type": "FACT",
+      "hint": "D4 is criminal",
+      "target_cell": "D4",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_d4",
+      "owner": "D4",
+      "type": "EXACTLY",
+      "hint": "Row 4 exactly 2 criminals",
+      "region": {
+        "kind": "row",
+        "index": 4
+      },
+      "k": 2
+    }
+  ]
+}
