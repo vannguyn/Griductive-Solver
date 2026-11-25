@@ -1,0 +1,145 @@
+{
+  "id": "griductive-3x3-01",
+  "size": 3,
+  "initially_revealed": [
+    "A1"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Ada",
+      "job": "Teacher"
+    },
+    {
+      "cell": "B1",
+      "name": "Ben",
+      "job": "Guard"
+    },
+    {
+      "cell": "C1",
+      "name": "Cara",
+      "job": "Farmer"
+    },
+    {
+      "cell": "A2",
+      "name": "Dev",
+      "job": "Pilot"
+    },
+    {
+      "cell": "B2",
+      "name": "Elle",
+      "job": "Cook"
+    },
+    {
+      "cell": "C2",
+      "name": "Finn",
+      "job": "Doctor"
+    },
+    {
+      "cell": "A3",
+      "name": "Gwen",
+      "job": "Painter"
+    },
+    {
+      "cell": "B3",
+      "name": "Hugo",
+      "job": "Builder"
+    },
+    {
+      "cell": "C3",
+      "name": "Isla",
+      "job": "Singer"
+    }
+  ],
+  "solution": {
+    "A1": true,
+    "B1": false,
+    "C1": false,
+    "A2": false,
+    "B2": true,
+    "C2": true,
+    "A3": true,
+    "B3": true,
+    "C3": true
+  },
+  "clues": [
+    {
+      "id": "clue-a1",
+      "owner": "A1",
+      "type": "EXACTLY",
+      "hint": "Hàng 1 có đúng 1 Criminal.",
+      "region": {
+        "kind": "row",
+        "index": 1
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-b1",
+      "owner": "B1",
+      "type": "FACT",
+      "hint": "B2 là Criminal.",
+      "target_cell": "B2",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-c1",
+      "owner": "C1",
+      "type": "DIFFERENT",
+      "hint": "C2 khác trạng thái với C1.",
+      "cell_a": "C2",
+      "cell_b": "C1"
+    },
+    {
+      "id": "clue-b2",
+      "owner": "B2",
+      "type": "FACT",
+      "hint": "A2 là Innocent.",
+      "target_cell": "A2",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "clue-c2",
+      "owner": "C2",
+      "type": "FACT",
+      "hint": "C3 là Criminal.",
+      "target_cell": "C3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-a2",
+      "owner": "A2",
+      "type": "FACT",
+      "hint": "A3 là Criminal.",
+      "target_cell": "A3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-c3",
+      "owner": "C3",
+      "type": "FACT",
+      "hint": "B3 là Criminal.",
+      "target_cell": "B3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-a3",
+      "owner": "A3",
+      "type": "SAME",
+      "hint": "A3 và A1 cùng trạng thái.",
+      "cell_a": "A3",
+      "cell_b": "A1"
+    },
+    {
+      "id": "clue-b3",
+      "owner": "B3",
+      "type": "EXACTLY",
+      "hint": "Hàng 3 có đúng 3 Criminal.",
+      "region": {
+        "kind": "row",
+        "index": 3
+      },
+      "k": 3
+    }
+  ]
+}
