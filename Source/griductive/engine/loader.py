@@ -20,6 +20,7 @@ Người phụ trách: Gia Hưng (Game Engine, App Session & PyQt6 GUI).
 
 import json
 from pathlib import Path
+from typing import Any
 from griductive.clues.parser import parse_clues
 from griductive.domain.errors import InvalidPuzzleError
 from griductive.domain.grid import all_coords, validate_coord
