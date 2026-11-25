@@ -1,0 +1,281 @@
+{
+  "id": "griductive-4x4-01",
+  "size": 4,
+  "initially_revealed": [
+    "A1"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Ada",
+      "job": "Teacher"
+    },
+    {
+      "cell": "B1",
+      "name": "Ben",
+      "job": "Guard"
+    },
+    {
+      "cell": "C1",
+      "name": "Cara",
+      "job": "Farmer"
+    },
+    {
+      "cell": "D1",
+      "name": "Dev",
+      "job": "Pilot"
+    },
+    {
+      "cell": "A2",
+      "name": "Elle",
+      "job": "Cook"
+    },
+    {
+      "cell": "B2",
+      "name": "Finn",
+      "job": "Doctor"
+    },
+    {
+      "cell": "C2",
+      "name": "Gwen",
+      "job": "Painter"
+    },
+    {
+      "cell": "D2",
+      "name": "Hugo",
+      "job": "Builder"
+    },
+    {
+      "cell": "A3",
+      "name": "Isla",
+      "job": "Singer"
+    },
+    {
+      "cell": "B3",
+      "name": "Jams",
+      "job": "Detective"
+    },
+    {
+      "cell": "C3",
+      "name": "Kino",
+      "job": "Analyst"
+    },
+    {
+      "cell": "D3",
+      "name": "Luke",
+      "job": "Engineer"
+    },
+    {
+      "cell": "A4",
+      "name": "Mara",
+      "job": "Journalist"
+    },
+    {
+      "cell": "B4",
+      "name": "Nuby",
+      "job": "Lawyer"
+    },
+    {
+      "cell": "C4",
+      "name": "Owen",
+      "job": "Architect"
+    },
+    {
+      "cell": "D4",
+      "name": "Piper",
+      "job": "Scientist"
+    }
+  ],
+  "solution": {
+    "A1": true,
+    "B1": false,
+    "C1": false,
+    "D1": false,
+    "A2": false,
+    "B2": true,
+    "C2": false,
+    "D2": false,
+    "A3": false,
+    "B3": false,
+    "C3": true,
+    "D3": false,
+    "A4": false,
+    "B4": false,
+    "C4": false,
+    "D4": true
+  },
+  "clues": [
+    {
+      "id": "clue-a1",
+      "owner": "A1",
+      "type": "EXACTLY",
+      "hint": "Hàng 1 có đúng 1 Criminal.",
+      "region": {
+        "kind": "row",
+        "index": 1
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-b1",
+      "owner": "B1",
+      "type": "FACT",
+      "hint": "B2 là Criminal.",
+      "target_cell": "B2",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-c1",
+      "owner": "C1",
+      "type": "EXACTLY",
+      "hint": "Hàng 2 có đúng 1 Criminal.",
+      "region": {
+        "kind": "row",
+        "index": 2
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-d1",
+      "owner": "D1",
+      "type": "FACT",
+      "hint": "C3 là Criminal.",
+      "target_cell": "C3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-a2",
+      "owner": "A2",
+      "type": "EXACTLY",
+      "hint": "Hàng 3 có đúng 1 Criminal.",
+      "region": {
+        "kind": "row",
+        "index": 3
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-b2",
+      "owner": "B2",
+      "type": "FACT",
+      "hint": "D4 là Criminal.",
+      "target_cell": "D4",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-c2",
+      "owner": "C2",
+      "type": "EXACTLY",
+      "hint": "Hàng 4 có đúng 1 Criminal.",
+      "region": {
+        "kind": "row",
+        "index": 4
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-d2",
+      "owner": "D2",
+      "type": "SAME",
+      "hint": "A1 và B2 cùng trạng thái.",
+      "cell_a": "A1",
+      "cell_b": "B2"
+    },
+    {
+      "id": "clue-a3",
+      "owner": "A3",
+      "type": "SAME",
+      "hint": "B2 và C3 cùng trạng thái.",
+      "cell_a": "B2",
+      "cell_b": "C3"
+    },
+    {
+      "id": "clue-b3",
+      "owner": "B3",
+      "type": "SAME",
+      "hint": "C3 và D4 cùng trạng thái.",
+      "cell_a": "C3",
+      "cell_b": "D4"
+    },
+    {
+      "id": "clue-c3",
+      "owner": "C3",
+      "type": "EXACTLY",
+      "hint": "Cột 3 có đúng 1 Criminal.",
+      "region": {
+        "kind": "column",
+        "index": 3
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-d3",
+      "owner": "D3",
+      "type": "EXACTLY",
+      "hint": "Cột 4 có đúng 1 Criminal.",
+      "region": {
+        "kind": "column",
+        "index": 4
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-a4",
+      "owner": "A4",
+      "type": "EXACTLY",
+      "hint": "Cột 1 có đúng 1 Criminal.",
+      "region": {
+        "kind": "column",
+        "index": 1
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-b4",
+      "owner": "B4",
+      "type": "EXACTLY",
+      "hint": "Cột 2 có đúng 1 Criminal.",
+      "region": {
+        "kind": "column",
+        "index": 2
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-c4",
+      "owner": "C4",
+      "type": "SAME",
+      "hint": "C4 và B1 cùng trạng thái.",
+      "cell_a": "C4",
+      "cell_b": "B1"
+    },
+    {
+      "id": "clue-d4",
+      "owner": "D4",
+      "type": "EXACTLY",
+      "hint": "Toàn bộ lưới có đúng 4 Criminal.",
+      "region": {
+        "kind": "explicit",
+        "cells": [
+          "A1",
+          "B1",
+          "C1",
+          "D1",
+          "A2",
+          "B2",
+          "C2",
+          "D2",
+          "A3",
+          "B3",
+          "C3",
+          "D3",
+          "A4",
+          "B4",
+          "C4",
+          "D4"
+        ]
+      },
+      "k": 4
+    }
+  ]
+}

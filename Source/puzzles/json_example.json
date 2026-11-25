@@ -1,0 +1,154 @@
+{
+  "id": "json-example-3x3",
+  "size": 3,
+  "initially_revealed": [
+    "A1"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Abel",
+      "job": "Detective"
+    },
+    {
+      "cell": "B1",
+      "name": "Bea",
+      "job": "Analyst"
+    },
+    {
+      "cell": "C1",
+      "name": "Cora",
+      "job": "Journalist"
+    },
+    {
+      "cell": "A2",
+      "name": "Dara",
+      "job": "Engineer"
+    },
+    {
+      "cell": "B2",
+      "name": "Eli",
+      "job": "Doctor"
+    },
+    {
+      "cell": "C2",
+      "name": "Faye",
+      "job": "Teacher"
+    },
+    {
+      "cell": "A3",
+      "name": "Gus",
+      "job": "Designer"
+    },
+    {
+      "cell": "B3",
+      "name": "Hana",
+      "job": "Lawyer"
+    },
+    {
+      "cell": "C3",
+      "name": "Iris",
+      "job": "Pilot"
+    }
+  ],
+  "solution": {
+    "A1": true,
+    "B1": false,
+    "C1": false,
+    "A2": false,
+    "B2": true,
+    "C2": true,
+    "A3": true,
+    "B3": true,
+    "C3": true
+  },
+  "clues": [
+    {
+      "id": "clue-a1",
+      "owner": "A1",
+      "type": "EXACTLY",
+      "hint": "Hàng 1 có đúng 1 Criminal. Vì A1 đã mở và là Criminal, B1 và C1 là Innocent.",
+      "region": {
+        "kind": "row",
+        "index": 1
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-b1",
+      "owner": "B1",
+      "type": "FACT",
+      "hint": "B2 là Criminal; có thể mở tiếp ô B2.",
+      "target_cell": "B2",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-c1",
+      "owner": "C1",
+      "type": "DIFFERENT",
+      "hint": "C2 khác trạng thái với C1; vì C1 là Innocent nên C2 là Criminal.",
+      "cell_a": "C2",
+      "cell_b": "C1"
+    },
+    {
+      "id": "clue-a2",
+      "owner": "A2",
+      "type": "DIFFERENT",
+      "hint": "A2 khác trạng thái với B3; khi biết A2 là Innocent sẽ suy ra B3 là Criminal.",
+      "cell_a": "A2",
+      "cell_b": "B3"
+    },
+    {
+      "id": "clue-b2",
+      "owner": "B2",
+      "type": "FACT",
+      "hint": "A2 là Innocent; có thể mở tiếp ô A2.",
+      "target_cell": "A2",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "clue-c2",
+      "owner": "C2",
+      "type": "PARITY",
+      "hint": "A3 và C2 có tổng số Criminal là số chẵn; vì C2 là Criminal nên A3 là Criminal.",
+      "parity": "EVEN",
+      "region": {
+        "kind": "explicit",
+        "cells": [
+          "A3",
+          "C2"
+        ]
+      }
+    },
+    {
+      "id": "clue-a3",
+      "owner": "A3",
+      "type": "FACT",
+      "hint": "C3 là Criminal; có thể mở tiếp ô C3.",
+      "target_cell": "C3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "clue-b3",
+      "owner": "B3",
+      "type": "SAME",
+      "hint": "B3 và C3 có cùng trạng thái.",
+      "cell_a": "B3",
+      "cell_b": "C3"
+    },
+    {
+      "id": "clue-c3",
+      "owner": "C3",
+      "type": "AT_MOST",
+      "hint": "Trong hai ô A3 và C3 có nhiều nhất 2 Criminal.",
+      "region": {
+        "kind": "explicit",
+        "cells": [
+          "A3",
+          "C3"
+        ]
+      },
+      "k": 2
+    }
+  ]
+}
