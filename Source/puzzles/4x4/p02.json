@@ -1,0 +1,237 @@
+{
+  "id": "griductive-4x4-02",
+  "size": 4,
+  "initially_revealed": [
+    "A1"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Ada",
+      "job": "Teacher"
+    },
+    {
+      "cell": "B1",
+      "name": "Ben",
+      "job": "Guard"
+    },
+    {
+      "cell": "C1",
+      "name": "Cara",
+      "job": "Farmer"
+    },
+    {
+      "cell": "D1",
+      "name": "Dev",
+      "job": "Pilot"
+    },
+    {
+      "cell": "A2",
+      "name": "Elle",
+      "job": "Cook"
+    },
+    {
+      "cell": "B2",
+      "name": "Finn",
+      "job": "Doctor"
+    },
+    {
+      "cell": "C2",
+      "name": "Gwen",
+      "job": "Painter"
+    },
+    {
+      "cell": "D2",
+      "name": "Hugo",
+      "job": "Builder"
+    },
+    {
+      "cell": "A3",
+      "name": "Isla",
+      "job": "Singer"
+    },
+    {
+      "cell": "B3",
+      "name": "Jams",
+      "job": "Detective"
+    },
+    {
+      "cell": "C3",
+      "name": "Kino",
+      "job": "Analyst"
+    },
+    {
+      "cell": "D3",
+      "name": "Luke",
+      "job": "Engineer"
+    },
+    {
+      "cell": "A4",
+      "name": "Mara",
+      "job": "Journalist"
+    },
+    {
+      "cell": "B4",
+      "name": "Nuby",
+      "job": "Lawyer"
+    },
+    {
+      "cell": "C4",
+      "name": "Owen",
+      "job": "Architect"
+    },
+    {
+      "cell": "D4",
+      "name": "Piper",
+      "job": "Scientist"
+    }
+  ],
+  "solution": {
+    "A1": false,
+    "B1": true,
+    "C1": false,
+    "D1": true,
+    "A2": true,
+    "B2": false,
+    "C2": true,
+    "D2": false,
+    "A3": false,
+    "B3": true,
+    "C3": false,
+    "D3": true,
+    "A4": true,
+    "B4": false,
+    "C4": true,
+    "D4": false
+  },
+  "clues": [
+    {
+      "id": "clue-a1",
+      "owner": "A1",
+      "type": "DIFFERENT",
+      "hint": "A1 và B1 khác trạng thái.",
+      "cell_a": "A1",
+      "cell_b": "B1"
+    },
+    {
+      "id": "clue-b1",
+      "owner": "B1",
+      "type": "DIFFERENT",
+      "hint": "B1 và C1 khác trạng thái.",
+      "cell_a": "B1",
+      "cell_b": "C1"
+    },
+    {
+      "id": "clue-c1",
+      "owner": "C1",
+      "type": "DIFFERENT",
+      "hint": "C1 và D1 khác trạng thái.",
+      "cell_a": "C1",
+      "cell_b": "D1"
+    },
+    {
+      "id": "clue-d1",
+      "owner": "D1",
+      "type": "DIFFERENT",
+      "hint": "D1 và D2 khác trạng thái.",
+      "cell_a": "D1",
+      "cell_b": "D2"
+    },
+    {
+      "id": "clue-d2",
+      "owner": "D2",
+      "type": "DIFFERENT",
+      "hint": "D2 và C2 khác trạng thái.",
+      "cell_a": "D2",
+      "cell_b": "C2"
+    },
+    {
+      "id": "clue-c2",
+      "owner": "C2",
+      "type": "DIFFERENT",
+      "hint": "C2 và B2 khác trạng thái.",
+      "cell_a": "C2",
+      "cell_b": "B2"
+    },
+    {
+      "id": "clue-b2",
+      "owner": "B2",
+      "type": "DIFFERENT",
+      "hint": "B2 và A2 khác trạng thái.",
+      "cell_a": "B2",
+      "cell_b": "A2"
+    },
+    {
+      "id": "clue-a2",
+      "owner": "A2",
+      "type": "DIFFERENT",
+      "hint": "A2 và A3 khác trạng thái.",
+      "cell_a": "A2",
+      "cell_b": "A3"
+    },
+    {
+      "id": "clue-a3",
+      "owner": "A3",
+      "type": "DIFFERENT",
+      "hint": "A3 và B3 khác trạng thái.",
+      "cell_a": "A3",
+      "cell_b": "B3"
+    },
+    {
+      "id": "clue-b3",
+      "owner": "B3",
+      "type": "DIFFERENT",
+      "hint": "B3 và C3 khác trạng thái.",
+      "cell_a": "B3",
+      "cell_b": "C3"
+    },
+    {
+      "id": "clue-c3",
+      "owner": "C3",
+      "type": "DIFFERENT",
+      "hint": "C3 và D3 khác trạng thái.",
+      "cell_a": "C3",
+      "cell_b": "D3"
+    },
+    {
+      "id": "clue-d3",
+      "owner": "D3",
+      "type": "DIFFERENT",
+      "hint": "D3 và D4 khác trạng thái.",
+      "cell_a": "D3",
+      "cell_b": "D4"
+    },
+    {
+      "id": "clue-d4",
+      "owner": "D4",
+      "type": "DIFFERENT",
+      "hint": "D4 và C4 khác trạng thái.",
+      "cell_a": "D4",
+      "cell_b": "C4"
+    },
+    {
+      "id": "clue-c4",
+      "owner": "C4",
+      "type": "DIFFERENT",
+      "hint": "C4 và B4 khác trạng thái.",
+      "cell_a": "C4",
+      "cell_b": "B4"
+    },
+    {
+      "id": "clue-b4",
+      "owner": "B4",
+      "type": "DIFFERENT",
+      "hint": "B4 và A4 khác trạng thái.",
+      "cell_a": "B4",
+      "cell_b": "A4"
+    },
+    {
+      "id": "clue-a4",
+      "owner": "A4",
+      "type": "FACT",
+      "hint": "A1 là Innocent.",
+      "target_cell": "A1",
+      "status": "INNOCENT"
+    }
+  ]
+}

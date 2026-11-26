@@ -1,0 +1,170 @@
+{
+  "id": "knotwise-tutorial-3x3",
+  "size": 3,
+  "initially_revealed": [
+    "B3"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Ada",
+      "job": "Teacher"
+    },
+    {
+      "cell": "B1",
+      "name": "Ben",
+      "job": "Guard"
+    },
+    {
+      "cell": "C1",
+      "name": "Cara",
+      "job": "Farmer"
+    },
+    {
+      "cell": "A2",
+      "name": "Dev",
+      "job": "Pilot"
+    },
+    {
+      "cell": "B2",
+      "name": "Elle",
+      "job": "Cook"
+    },
+    {
+      "cell": "C2",
+      "name": "Finn",
+      "job": "Doctor"
+    },
+    {
+      "cell": "A3",
+      "name": "Gwen",
+      "job": "Painter"
+    },
+    {
+      "cell": "B3",
+      "name": "Hugo",
+      "job": "Builder"
+    },
+    {
+      "cell": "C3",
+      "name": "Isla",
+      "job": "Singer"
+    }
+  ],
+  "solution": {
+    "A1": false,
+    "B1": true,
+    "C1": false,
+    "A2": false,
+    "B2": true,
+    "C2": false,
+    "A3": true,
+    "B3": false,
+    "C3": false
+  },
+  "clues": [
+    {
+      "id": "clue-b3",
+      "owner": "B3",
+      "type": "EXACTLY",
+      "hint": "Cột C không có tội phạm nào.",
+      "region": {
+        "kind": "column",
+        "index": 3
+      },
+      "k": 0
+    },
+    {
+      "id": "clue-c3",
+      "owner": "C3",
+      "type": "EXACTLY",
+      "hint": "C3 chỉ có đúng 1 hàng xóm là Criminal.",
+      "region": {
+        "kind": "neighbors",
+        "center": "C3"
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-b2",
+      "owner": "B2",
+      "type": "EXACTLY",
+      "hint": "Cột B có đúng 2 tội phạm.",
+      "region": {
+        "kind": "column",
+        "index": 2
+      },
+      "k": 2
+    },
+    {
+      "id": "clue-c1",
+      "owner": "C1",
+      "type": "EXACTLY",
+      "hint": "Hàng 1 có đúng 1 tội phạm.",
+      "region": {
+        "kind": "row",
+        "index": 1
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-a1",
+      "owner": "A1",
+      "type": "AT_LEAST",
+      "hint": "Hàng 3 có ít nhất 1 tội phạm.",
+      "region": {
+        "kind": "row",
+        "index": 3
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-a3",
+      "owner": "A3",
+      "type": "EXACTLY",
+      "hint": "Cả bàn cờ có đúng 3 tội phạm.",
+      "region": {
+        "kind": "explicit",
+        "cells": [
+          "A1",
+          "B1",
+          "C1",
+          "A2",
+          "B2",
+          "C2",
+          "A3",
+          "B3",
+          "C3"
+        ]
+      },
+      "k": 3
+    },
+    {
+      "id": "clue-a2",
+      "owner": "A2",
+      "type": "EXACTLY",
+      "hint": "Hàng 2 có đúng 1 tội phạm.",
+      "region": {
+        "kind": "row",
+        "index": 2
+      },
+      "k": 1
+    },
+    {
+      "id": "clue-c2",
+      "owner": "C2",
+      "type": "SAME",
+      "hint": "C2 và C1 cùng trạng thái.",
+      "cell_a": "C2",
+      "cell_b": "C1"
+    },
+    {
+      "id": "clue-b1",
+      "owner": "B1",
+      "type": "SAME",
+      "hint": "B1 và B2 cùng trạng thái.",
+      "cell_a": "B1",
+      "cell_b": "B2"
+    }
+  ]
+}

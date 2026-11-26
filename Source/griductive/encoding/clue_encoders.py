@@ -19,6 +19,8 @@ Output:
 Người phụ trách: Nhật Tân (CNF Encoding & Clue Parsing/Validation).
 """
 
+from itertools import product
+
 from griductive.clues.base import Clue
 from griductive.clues.core import (
     AtLeastClue,
@@ -76,24 +78,99 @@ def encode_at_most(clue: AtMostClue, varmap: VarMap, direct_threshold: int = 64)
 
 def encode_parity(clue: ParityClue, varmap: VarMap, direct_threshold: int = 64) -> list[Clause]:
     """Mã hóa clue PARITY (EVEN hoặc ODD)."""
-    import itertools
     lits = [varmap.coord_to_var(c) for c in clue.region_cells]
+    if clue.parity not in ("EVEN", "ODD"):
+        return [[]]
+    if not lits:
+        return [] if clue.parity == "EVEN" else [[]]
     clauses: list[Clause] = []
-    # Với vùng nhỏ, cấm mọi phép gán có parity trái ngược
+    if 2 ** (len(lits) - 1) > direct_threshold:
+        result = _parity_literal(clue, varmap, clauses)
+        clauses.append([result])
+        return clauses
+
     is_even = (clue.parity == "EVEN")
-    for bits in itertools.product([0, 1], repeat=len(lits)):
-        count_ones = sum(bits)
-        # Nếu parity của tổ hợp này sai -> thêm mệnh đề cấm
-        if (count_ones % 2 == 0) != is_even:
-            clause = [-lit if b == 1 else lit for lit, b in zip(lits, bits)]
-            clauses.append(clause)
+    for bits in product((False, True), repeat=len(lits)):
+        if (sum(bits) % 2 == 0) != is_even:
+            clauses.append([-lit if bit else lit for lit, bit in zip(lits, bits)])
     return clauses
+
+
+def _parity_literal(clue: ParityClue, varmap: VarMap, clauses: list[Clause]) -> int:
+    lits = [varmap.coord_to_var(c) for c in clue.region_cells]
+    if not lits or clue.parity not in ("EVEN", "ODD"):
+        return _and_literal([], varmap, clauses) * (1 if clue.parity == "EVEN" else -1)
+    odd = lits[0]
+    for lit in lits[1:]:
+        result = varmap.allocate_aux_var()
+        clauses.extend([
+            [-odd, -lit, -result], [odd, lit, -result],
+            [-odd, lit, result], [odd, -lit, result],
+        ])
+        odd = result
+    return odd if clue.parity == "ODD" else -odd
+
+
+def _and_literal(lits: list[int], varmap: VarMap, clauses: list[Clause]) -> int:
+    """Return a literal equivalent to the conjunction, including empty AND."""
+    if len(lits) == 1:
+        return lits[0]
+    result = varmap.allocate_aux_var()
+    clauses.extend([[-result, lit] for lit in lits])
+    clauses.append([result, *(-lit for lit in lits)])
+    return result
+
+
+def _at_most_literal(
+    lits: list[int], k: int, varmap: VarMap, threshold: int, clauses: list[Clause],
+) -> int:
+    """Tie a fresh variable to a count bound by encoding both polarities."""
+    result = varmap.allocate_aux_var()
+    satisfied = encode_cardinality(lits, k, "AT_MOST", varmap, threshold)
+    violated = encode_cardinality(lits, k + 1, "AT_LEAST", varmap, threshold)
+    clauses.extend([[-result, *clause] for clause in satisfied])
+    clauses.extend([[result, *clause] for clause in violated])
+    return result
+
+
+def _clue_literal(
+    clue: Clue, varmap: VarMap, threshold: int, clauses: list[Clause],
+) -> int:
+    if isinstance(clue, CompoundClue):
+        if clue.op == "NOT" and len(clue.sub_clues) == 1:
+            return -_clue_literal(clue.sub_clues[0], varmap, threshold, clauses)
+        if clue.op in ("AND", "OR"):
+            children = [_clue_literal(sub, varmap, threshold, clauses) for sub in clue.sub_clues]
+            if clue.op == "AND":
+                return _and_literal(children, varmap, clauses)
+            return -_and_literal([-child for child in children], varmap, clauses)
+        return -_and_literal([], varmap, clauses)
+
+    if isinstance(clue, ParityClue):
+        return _parity_literal(clue, varmap, clauses)
+
+    if isinstance(clue, (AtMostClue, AtLeastClue, ExactlyClue)):
+        lits = [varmap.coord_to_var(c) for c in clue.region_cells]
+        if isinstance(clue, AtMostClue):
+            return _at_most_literal(lits, clue.k, varmap, threshold, clauses)
+        lower = _at_most_literal([-lit for lit in lits], len(lits) - clue.k, varmap, threshold, clauses)
+        if isinstance(clue, AtLeastClue):
+            return lower
+        upper = _at_most_literal(lits, clue.k, varmap, threshold, clauses)
+        return _and_literal([lower, upper], varmap, clauses)
+
+    # For FACT, SAME and DIFFERENT, reify the small direct CNF clause by clause.
+    direct = encode_single_clue(clue, varmap, threshold)
+    clause_lits = [-_and_literal([-lit for lit in clause], varmap, clauses) for clause in direct]
+    return _and_literal(clause_lits, varmap, clauses)
 
 
 def encode_compound(clue: CompoundClue, varmap: VarMap, direct_threshold: int = 64) -> list[Clause]:
     """Mã hóa clue COMPOUND (AND/OR/NOT)."""
-    # TODO (Nhật Tân): Hoàn thiện biến phụ Tseitin cho Compound Clue
-    raise NotImplementedError("Nhật Tân sẽ hoàn thiện mã hóa Compound Clue tại đây.")
+    clauses: list[Clause] = []
+    result = _clue_literal(clue, varmap, direct_threshold, clauses)
+    clauses.append([result])
+    return clauses
 
 
 def encode_single_clue(

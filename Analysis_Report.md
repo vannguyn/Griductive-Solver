@@ -358,6 +358,37 @@ Cả nhóm cùng viết báo cáo, mỗi người viết phần mình làm. **Gh
 6. **Tài liệu tham khảo và Phụ lục:** cách dùng AI/LLM và các prompt.
 7. Link video demo Google Drive (đặt trong `Report.pdf`).
 
+### Mã hóa CNF và số liệu kiểm chứng cho vùng 5×5
+
+Với literal $x_i$ ứng với ô thứ $i$, mã hóa trực tiếp của `AT_MOST(k)`
+thêm mệnh đề $\bigvee_{i\in S}\neg x_i$ cho mỗi tập $S$ có $k+1$ phần tử.
+`AT_LEAST(k)` áp dụng cùng quy tắc cho các literal phủ định và cận $n-k$.
+`EXACTLY(k)` kết hợp cả hai cận. Encoder chuyển sang Sequential Counter
+khi số mệnh đề trực tiếp dự kiến vượt ngưỡng mặc định 64.
+
+Sequential Counter dùng biến phụ $s_{i,j}$ để ghi nhận tiền tố gồm $i$
+literal đã có ít nhất $j$ literal đúng. Các mệnh đề truyền kết quả từ
+$s_{i-1,j}$ sang $s_{i,j}$ và từ $s_{i-1,j-1}\land x_i$ sang $s_{i,j}$.
+Mệnh đề $\neg x_i\lor\neg s_{i-1,k}$ cấm bước vượt cận $k$.
+
+`PARITY` trên vùng lớn dùng chuỗi biến XOR, mỗi bước thỏa
+$p_i \leftrightarrow (p_{i-1}\oplus x_i)$. Mệnh đề đơn cuối chọn chẵn
+hoặc lẻ. `COMPOUND` dùng literal đại diện tương đương với từng clue con.
+Với cận đếm $r \leftrightarrow (\sum x_i \le k)$, encoder gắn $r$ với
+cận trên và $\neg r$ với cận bù $\sum x_i \ge k+1$. Nhờ vậy, `OR` và
+`NOT` dùng được cả với clue đếm có biến phụ. Một mệnh đề đơn khẳng định
+literal đại diện của clue gốc.
+
+| Clue riêng lẻ trên vùng 25 ô | Biến chính | Biến phụ | Mệnh đề sinh ra |
+|---|---:|---:|---:|
+| `EXACTLY(12)` | 25 | 456 | 912 |
+| `PARITY(EVEN)` | 25 | 24 | 97 |
+
+Hai phép thử vùng lớn kiểm tra từng số lượng Criminal từ 0 đến 25 trên
+một phép gán đại diện cho mỗi số lượng. Trên vùng nhỏ, bộ test đối chiếu
+SAT theo từng phép gán với `Clue.evaluate()`, kể cả clue lồng nhau và cả
+hai đường mã hóa.
+
 ### Sáu chỉ số cần ghi cho mỗi puzzle
 
 | # | Chỉ số | Nguồn thu thập |

@@ -75,10 +75,40 @@ def encode_sequential_counter(
     varmap: VarMap,
 ) -> list[Clause]:
     """Mã hóa ràng buộc cardinality bằng Sequential Counter (Sinz 2005) dùng biến phụ."""
-    # TODO (Nhật Tân): Cài đặt Sequential Counter cho vùng lớn
-    # Với lưới 3x3 và 4x4, direct encoding đã đủ đáp ứng hầu hết trường hợp <= 64 clauses.
-    # Sequential counter sẽ giải quyết triệt để stress-case 5x5.
-    raise NotImplementedError("Nhật Tân sẽ hoàn thiện Sequential Counter fallback tại đây.")
+    kind = kind.upper()
+    if kind == "AT_MOST":
+        return _sequential_at_most(lits, k, varmap)
+    if kind == "AT_LEAST":
+        return _sequential_at_most([-lit for lit in lits], len(lits) - k, varmap)
+    if kind == "EXACTLY":
+        if not 0 <= k <= len(lits):
+            return [[]]
+        return encode_sequential_counter(lits, k, "AT_MOST", varmap) + (
+            encode_sequential_counter(lits, k, "AT_LEAST", varmap)
+        )
+    raise ValueError(f"Loại cardinality không hợp lệ: {kind}")
+
+
+def _sequential_at_most(lits: Sequence[int], k: int, varmap: VarMap) -> list[Clause]:
+    if k <= 0 or k >= len(lits):
+        return encode_at_most_direct(lits, k)
+
+    clauses: list[Clause] = []
+    previous: tuple[int, ...] = ()
+    for index, lit in enumerate(lits):
+        # previous[j] is forced when the prefix contains at least j+1 true literals.
+        if len(previous) == k:
+            clauses.append([-lit, -previous[-1]])
+        if index == len(lits) - 1:
+            break
+        current = varmap.allocate_aux_vars(min(index + 1, k))
+        clauses.append([-lit, current[0]])
+        for count_index, prefix_lit in enumerate(previous):
+            clauses.append([-prefix_lit, current[count_index]])
+            if count_index + 1 < len(current):
+                clauses.append([-lit, -prefix_lit, current[count_index + 1]])
+        previous = current
+    return clauses
 
 
 def encode_cardinality(

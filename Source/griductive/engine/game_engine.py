@@ -53,8 +53,22 @@ class GameEngine:
 
         self._solve_status = SolveStatus.RUNNING
 
+    def _refresh_solve_status(self) -> None:
+        """Cập nhật cờ SOLVED khi mọi ô đã được lật.
+
+        Chỉ nâng RUNNING lên SOLVED; các cờ INCONSISTENT/STUCK/TIMEOUT đã đặt
+        trước đó không bị ghi đè trừ khi ván chơi thực sự hoàn tất.
+        """
+        if len(self._revealed_cells) == self.puzzle.size * self.puzzle.size:
+            self._solve_status = SolveStatus.SOLVED
+
     def public_state(self) -> PublicState:
-        """Sinh ra PublicState hiện tại an toàn cho Agent và GUI."""
+        """Sinh ra PublicState hiện tại an toàn cho Agent và GUI.
+
+        Lưu ý: hàm này có tác dụng phụ nhỏ là gọi `_refresh_solve_status()` để
+        đồng bộ cờ SOLVED. Danh sách `revealed_clues` được sắp xếp row-major
+        để thứ tự ổn định giữa các lần gọi (GUI và test lặp lại được).
+        """
         cells: list[PublicCell] = []
         for c in all_coords(self.puzzle.size):
             char_info = self.puzzle.characters[c]
@@ -64,13 +78,11 @@ class GameEngine:
 
         # Lấy các clue của những ô đã được lật
         revealed_clues: list[Clue] = []
-        for c in self._revealed_cells:
-            if c in self.puzzle.clues:
+        for c in all_coords(self.puzzle.size):  # row-major, không phụ thuộc thứ tự set
+            if c in self._revealed_cells and c in self.puzzle.clues:
                 revealed_clues.append(self.puzzle.clues[c])
 
-        # Kiểm tra hoàn thành
-        if len(self._revealed_cells) == self.puzzle.size * self.puzzle.size:
-            self._solve_status = SolveStatus.SOLVED
+        self._refresh_solve_status()
 
         return PublicState(
             puzzle_id=self.puzzle.id,
