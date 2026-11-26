@@ -35,6 +35,7 @@ from griductive.domain.grid import Coord
 from griductive.domain.public_state import PublicState
 from griductive.domain.types import SolveStatus, Status, VerdictResult
 from griductive.gui.board_view import BoardView
+from griductive.gui.card_widget import FLIP_DURATION_MS
 from griductive.gui.clue_panel import CluePanel, format_clue_description
 from griductive.gui.controls import (
     DEFAULT_STEP_DELAY_MS,
@@ -152,6 +153,7 @@ class MainWindow(QMainWindow):
         self._timer.setInterval(DEFAULT_STEP_DELAY_MS)
         self._timer.timeout.connect(self._on_auto_solve_tick)
         self._current_spotlight_owner: Coord | None = None
+        self._victory_epoch = 0
 
         # Tự động nạp màn Tutorial mẫu khi khởi động để trải nghiệm ngay
         self._on_preset_level_selected("3x3/tutorial.json")
@@ -179,6 +181,18 @@ class MainWindow(QMainWindow):
                 self.clue_banner.display_clue(clue, name, job)
                 self.board_view.spotlight_clue(subject=clue.owner, targets=clue.cells())
                 self._current_spotlight_owner = clue.owner
+            else:
+                self._reset_highlights()
+
+    def _schedule_victory_dialog(self, title: str, message: str) -> None:
+        """Hiển thị hộp thoại chiến thắng sau khi hiệu ứng lật thẻ cuối hoàn tất."""
+        epoch = self._victory_epoch
+
+        def _show() -> None:
+            if epoch == self._victory_epoch:
+                QMessageBox.information(self, title, message)
+
+        QTimer.singleShot(FLIP_DURATION_MS + 60, _show)
 
     def _reset_highlights(self) -> None:
         self._current_spotlight_owner = None
@@ -210,6 +224,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Lỗi nạp file", f"Không thể nạp vụ án: {e}")
             return
 
+        self._victory_epoch += 1
         self._reset_highlights()
         self._show_state(state)
         self.statusBar().showMessage(f"Đã nạp vụ án: {state.puzzle_id}", 4000)
@@ -226,6 +241,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Lỗi nạp vụ án", str(e))
             return
 
+        self._victory_epoch += 1
         self._reset_highlights()
         self._show_state(state)
 
@@ -234,6 +250,7 @@ class MainWindow(QMainWindow):
         if not self.session.has_active_game:
             return
         self._stop_auto_solve()
+        self._victory_epoch += 1
         state = self.session.restart()
         self._reset_highlights()
         self._show_state(state)
@@ -269,12 +286,10 @@ class MainWindow(QMainWindow):
             return
 
         if outcome.result == VerdictResult.ACCEPTED:
-            self._reset_highlights()
             self._show_state(outcome.public_state, new_owner=outcome.cell)
             self.statusBar().showMessage(outcome.message, 4000)
             if outcome.public_state.solve_status == SolveStatus.SOLVED or outcome.public_state.is_all_revealed():
-                QMessageBox.information(
-                    self,
+                self._schedule_victory_dialog(
                     "VỤ ÁN HOÀN TẤT!",
                     "Chúc mừng Thám tử! Bạn đã dùng suy luận logic thuần túy để vạch trần mọi tội phạm!",
                 )
@@ -366,8 +381,7 @@ class MainWindow(QMainWindow):
         self.header_bar.set_status_text(f"● {text.upper()}")
 
         if final_status == SolveStatus.SOLVED:
-            QMessageBox.information(
-                self,
+            self._schedule_victory_dialog(
                 "VỤ ÁN HOÀN TẤT!",
                 f"Tác tử logic đã giải xong vụ án qua {len(last.trace.steps)} bước suy luận thuần túy!",
             )

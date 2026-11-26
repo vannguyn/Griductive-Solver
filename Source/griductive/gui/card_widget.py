@@ -9,8 +9,10 @@ Tác dụng:
     - Hiệu ứng rung lắc (Shake animation) cảnh báo phản hồi khi người chơi phán đoán sai hoặc chưa đủ chứng cứ.
 """
 
-from PyQt6.QtCore import QEasingCurve, QPointF, QRectF, QSize, Qt, QVariantAnimation, pyqtSignal
-from PyQt6.QtGui import QBrush, QColor, QFont, QMouseEvent, QPainter, QPainterPath, QPen
+import math
+
+from PyQt6.QtCore import QEasingCurve, QRectF, QSize, Qt, QVariantAnimation, pyqtSignal
+from PyQt6.QtGui import QBrush, QColor, QFont, QMouseEvent, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import QWidget
 from griductive.domain.grid import Coord
 from griductive.domain.public_state import PublicCell
@@ -21,6 +23,7 @@ from griductive.gui.assets.avatars import get_character_avatar
 CARD_BASE_WIDTH = 135
 CARD_BASE_HEIGHT = 165
 FLIP_HALF_MS = 175
+FLIP_DURATION_MS = FLIP_HALF_MS * 2
 SHAKE_MS = 320
 
 # Màu sắc thẻ editorial
@@ -62,11 +65,15 @@ class CharacterCardWidget(QWidget):
         self.is_dimmed = False
         self.is_hovered = False
 
-        # Quản lý hoạt ảnh
+        # Quản lý hoạt ảnh & bộ đệm mặt thẻ
+        self._display_revealed = False
+        self._flip_target_revealed = False
         self._scale_x = 1.0
         self._shake_offset = 0.0
         self._flip_anim: QVariantAnimation | None = None
         self._shake_anim: QVariantAnimation | None = None
+        self._face_cache: QPixmap | None = None
+        self._face_cache_key: tuple | None = None
 
         self.setMinimumSize(CARD_BASE_WIDTH, CARD_BASE_HEIGHT)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -75,19 +82,44 @@ class CharacterCardWidget(QWidget):
     def sizeHint(self) -> QSize:
         return QSize(CARD_BASE_WIDTH, CARD_BASE_HEIGHT)
 
+    def stop_animations(self) -> None:
+        """Dừng mọi hoạt ảnh đang chạy và khôi phục trạng thái hình học mặc định."""
+        self._stop_flip_animation(reset_scale=True)
+        if self._shake_anim is not None:
+            if self._shake_anim.state() == QVariantAnimation.State.Running:
+                self._shake_anim.stop()
+            self._shake_anim = None
+        self._shake_offset = 0.0
+
+    def _stop_flip_animation(self, reset_scale: bool = True) -> None:
+        if self._flip_anim is not None:
+            anim = self._flip_anim
+            self._flip_anim = None
+            if anim.state() == QVariantAnimation.State.Running:
+                anim.stop()
+        if reset_scale:
+            self._scale_x = 1.0
+
     def set_cell_data(self, cell: PublicCell, animate_flip_if_new: bool = False) -> None:
         """Cập nhật dữ liệu từ PublicCell, kích hoạt flip nếu thẻ vừa được mở."""
         old_revealed = self.revealed
         self.char_name = cell.name
         self.char_job = cell.job
         self.status = cell.status
-        new_revealed = cell.revealed
+        self.revealed = cell.revealed
 
-        if animate_flip_if_new and not old_revealed and new_revealed:
-            self.revealed = old_revealed  # Giữ trạng thái cũ cho nửa đầu animation
-            self._start_flip_animation(target_revealed=new_revealed)
+        if animate_flip_if_new and not old_revealed and cell.revealed:
+            self._display_revealed = old_revealed  # Giữ mặt cũ cho nửa đầu animation
+            self._start_flip_animation(target_revealed=cell.revealed)
+        elif not animate_flip_if_new or not cell.revealed:
+            # Khi rebuild / restart / đồng bộ ép buộc, hủy flip cũ để thẻ không kẹt co ngang
+            self._stop_flip_animation(reset_scale=True)
+            self._display_revealed = cell.revealed
+            self.update()
         else:
-            self.revealed = new_revealed
+            # Nếu thẻ đang lật dở cho chính trạng thái mới này, giữ animation tiếp tục mượt mà
+            if self._flip_anim is None:
+                self._display_revealed = cell.revealed
             self.update()
 
     def set_spotlight(self, role: str | None, dimmed: bool = False) -> None:
@@ -111,13 +143,13 @@ class CharacterCardWidget(QWidget):
         def on_shake_step(t: object) -> None:
             # Sóng dao động giảm dần: -8, +8, -5, +5, -2, 0
             val = float(t)
-            import math
             decay = 1.0 - val
-            offset = 9.0 * math.sin(val * math.pi * 5.0) * decay
-            self._shake_offset = offset
+            self._shake_offset = 9.0 * math.sin(val * math.pi * 5.0) * decay
             self.update()
 
         def on_shake_done() -> None:
+            if self._shake_anim is anim:
+                self._shake_anim = None
             self._shake_offset = 0.0
             self.update()
 
@@ -127,46 +159,35 @@ class CharacterCardWidget(QWidget):
         anim.start()
 
     def _start_flip_animation(self, target_revealed: bool) -> None:
-        """Hoạt ảnh lật thẻ 3D: co hẹp theo trục X rồi nở ra với mặt mới."""
-        if self._flip_anim is not None and self._flip_anim.state() == QVariantAnimation.State.Running:
-            self._flip_anim.stop()
+        """Hoạt ảnh lật thẻ 3D liên tục trên một animation duy nhất (không khựng ở điểm giữa)."""
+        self._stop_flip_animation(reset_scale=False)
+        self._flip_target_revealed = target_revealed
 
-        anim1 = QVariantAnimation(self)
-        anim1.setDuration(FLIP_HALF_MS)
-        anim1.setStartValue(1.0)
-        anim1.setEndValue(0.0)
-        anim1.setEasingCurve(QEasingCurve.Type.InCubic)
+        anim = QVariantAnimation(self)
+        anim.setDuration(FLIP_DURATION_MS)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.Type.Linear)
 
-        def on_shrink(val: object) -> None:
-            self._scale_x = float(val)
+        def on_flip_step(val: object) -> None:
+            progress = float(val)
+            if progress >= 0.5 and self._display_revealed != self._flip_target_revealed:
+                self._display_revealed = self._flip_target_revealed
+            # Phép chiếu góc quay 3D: cos(theta) với theta từ 0 -> pi
+            self._scale_x = abs(math.cos(progress * math.pi))
             self.update()
 
-        def on_halfway() -> None:
-            # Đổi mặt thẻ
-            self.revealed = target_revealed
-            anim2 = QVariantAnimation(self)
-            anim2.setDuration(FLIP_HALF_MS)
-            anim2.setStartValue(0.0)
-            anim2.setEndValue(1.0)
-            anim2.setEasingCurve(QEasingCurve.Type.OutCubic)
+        def on_flip_done() -> None:
+            if self._flip_anim is anim:
+                self._flip_anim = None
+            self._display_revealed = self._flip_target_revealed
+            self._scale_x = 1.0
+            self.update()
 
-            def on_grow(val: object) -> None:
-                self._scale_x = float(val)
-                self.update()
-
-            def on_done() -> None:
-                self._scale_x = 1.0
-                self.update()
-
-            anim2.valueChanged.connect(on_grow)
-            anim2.finished.connect(on_done)
-            self._flip_anim = anim2
-            anim2.start()
-
-        anim1.valueChanged.connect(on_shrink)
-        anim1.finished.connect(on_halfway)
-        self._flip_anim = anim1
-        anim1.start()
+        anim.valueChanged.connect(on_flip_step)
+        anim.finished.connect(on_flip_done)
+        self._flip_anim = anim
+        anim.start()
 
     # ------------------------------------------------------------- Events
     def enterEvent(self, event: object) -> None:
@@ -187,28 +208,46 @@ class CharacterCardWidget(QWidget):
         super().mousePressEvent(event)
 
     # ----------------------------------------------------------- Painting
-    def paintEvent(self, event: object) -> None:
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    def _get_face_pixmap(self) -> QPixmap:
+        """Render mặt thẻ vào QPixmap cache ở tỷ lệ 1.0 để hiệu ứng lật đạt 60fps mượt mà."""
+        w = self.width()
+        h = self.height()
+        dpr = max(1.0, round(float(self.devicePixelRatioF()), 2))
+        key = (
+            w,
+            h,
+            dpr,
+            self._display_revealed,
+            self.status,
+            self.highlight_role,
+            self.is_hovered,
+            self.char_name,
+            self.char_job,
+            self.coord,
+        )
+        if self._face_cache is not None and self._face_cache_key == key:
+            return self._face_cache
 
-        width = float(self.width())
-        height = float(self.height())
+        px_w = max(1, round(w * dpr))
+        px_h = max(1, round(h * dpr))
+        pixmap = QPixmap(px_w, px_h)
+        pixmap.setDevicePixelRatio(dpr)
+        pixmap.fill(Qt.GlobalColor.transparent)
 
-        # Độ mờ khi thẻ không thuộc spotlight
-        opacity = 0.35 if self.is_dimmed else 1.0
-        painter.setOpacity(opacity)
+        face_painter = QPainter(pixmap)
+        face_painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        face_painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        self._paint_card_face(face_painter, float(w), float(h), dpr)
+        face_painter.end()
 
-        # Áp dụng rung lắc và tỷ lệ lật X
-        center_x = width / 2.0 + self._shake_offset
-        center_y = height / 2.0
+        self._face_cache = pixmap
+        self._face_cache_key = key
+        return pixmap
 
-        painter.translate(center_x, center_y)
-        painter.scale(self._scale_x, 1.0)
-        painter.translate(-width / 2.0, -height / 2.0)
-
+    def _paint_card_face(self, painter: QPainter, width: float, height: float, dpr: float) -> None:
+        """Vẽ toàn bộ nội dung mặt thẻ tại tỷ lệ gốc 1.0."""
         # 1. Xác định màu nền và viền
-        if not self.revealed:
+        if not self._display_revealed:
             bg_color = COLOR_UNKNOWN_BG
             border_color = COLOR_UNKNOWN_BORDER
             text_color = COLOR_UNKNOWN_TEXT
@@ -252,7 +291,7 @@ class CharacterCardWidget(QWidget):
         avatar_size = int(min(width * 0.44, height * 0.36))
         avatar_x = int((width - avatar_size) / 2.0)
         avatar_y = int(height * 0.16)
-        pix = get_character_avatar(self.char_name, avatar_size)
+        pix = get_character_avatar(self.char_name, avatar_size, dpr=dpr)
         painter.drawPixmap(avatar_x, avatar_y, pix)
 
         # 5. Vẽ Tên nhân vật (Editorial typography)
@@ -275,7 +314,7 @@ class CharacterCardWidget(QWidget):
         badge_path = QPainterPath()
         badge_path.addRoundedRect(badge_rect, 6.0, 6.0)
 
-        if not self.revealed:
+        if not self._display_revealed:
             painter.fillPath(badge_path, QBrush(QColor("#2C3444")))
             painter.setPen(QPen(QColor("#94A3B8")))
             badge_text = "❓ CHƯA RÕ"
@@ -291,3 +330,28 @@ class CharacterCardWidget(QWidget):
         badge_font = QFont("Segoe UI", 8, QFont.Weight.Bold)
         painter.setFont(badge_font)
         painter.drawText(badge_rect, int(Qt.AlignmentFlag.AlignCenter), badge_text)
+
+    def paintEvent(self, event: object) -> None:
+        width = float(self.width())
+        height = float(self.height())
+        if width <= 0.0 or height <= 0.0:
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        # Độ mờ khi thẻ không thuộc spotlight
+        opacity = 0.35 if self.is_dimmed else 1.0
+        painter.setOpacity(opacity)
+
+        # Áp dụng rung lắc và tỷ lệ lật X (tránh ma trận suy biến 0.0)
+        effective_scale_x = max(0.015, self._scale_x)
+        center_x = width / 2.0 + self._shake_offset
+        center_y = height / 2.0
+
+        painter.translate(center_x, center_y)
+        painter.scale(effective_scale_x, 1.0)
+        painter.translate(-width / 2.0, -height / 2.0)
+
+        painter.drawPixmap(0, 0, self._get_face_pixmap())

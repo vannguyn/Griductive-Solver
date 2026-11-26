@@ -1,62 +1,108 @@
-"""Cross-testing: CNF Encoder vs. Semantic Evaluator.
+from itertools import product
 
-Tác dụng:
-    Kiểm thử chéo độc lập giữa Encoder (Nhật Tân) và Semantic Evaluator (Nhật Minh):
-    Với mọi loại Clue (6 core + 2 extensions) và với mọi phép gán giá trị Boolean của các ô liên quan,
-    chứng minh rằng:
-        clue.evaluate(assignment) == True <=> CNF(clue) kết hợp với assignment là SAT.
-
-Input:
-    Các đối tượng Clue khác nhau và toàn bộ 2^k phép gán chân trị.
-
-Output:
-    Khẳng định tính tương đương logic 100% giữa CNF và ngữ nghĩa đề bài.
-
-Người phụ trách: Nhật Minh (SAT, Reasoning & Clue Semantics) phối hợp Nhật Tân.
-"""
-
-import itertools
 import pytest
-from griductive.clues.core import DifferentClue, ExactlyClue, FactClue, SameClue
+
+from griductive.clues.base import Clue
+from griductive.clues.core import (
+    AtLeastClue,
+    AtMostClue,
+    DifferentClue,
+    ExactlyClue,
+    FactClue,
+    SameClue,
+)
+from griductive.clues.extensions import CompoundClue, ParityClue
+from griductive.domain.grid import all_coords
 from griductive.domain.regions import RegionKind, RegionSpec
 from griductive.domain.types import Status
 from griductive.encoding.encoder import Encoder
 from griductive.encoding.varmap import VarMap
+from griductive.sat.cnf import SatStatus
 from griductive.sat.dpll import DPLLSolver
 
 
-def test_fact_encoder_vs_eval() -> None:
-    """Kiểm tra clue FACT tương đương giữa evaluator và CNF."""
-    clue = FactClue("c1", "A1", target_cell="A1", target_status=Status.CRIMINAL)
+ROW = RegionSpec(kind=RegionKind.ROW, index=1)
+ROW_CELLS = ("A1", "B1", "C1")
+FACT_A = FactClue("a", "A1", "A1", Status.CRIMINAL)
+FACT_B = FactClue("b", "A1", "B1", Status.CRIMINAL)
+NOT_A = CompoundClue("not-a", "A1", "NOT", (FACT_A,))
+AND_AB = CompoundClue("and", "A1", "AND", (FACT_A, FACT_B))
+OR_NOT_A_B = CompoundClue("or", "A1", "OR", (NOT_A, FACT_B))
+COMPOUND_CASES = (
+    pytest.param(AND_AB, (False, False, False, True), id="AND"),
+    pytest.param(OR_NOT_A_B, (True, True, False, True), id="OR-with-NOT"),
+    pytest.param(NOT_A, (True, True, False, False), id="NOT"),
+)
+CARDINALITY_CASES = (
+    pytest.param(ExactlyClue("exactly", "A1", 1, ROW, ROW_CELLS), id="EXACTLY"),
+    pytest.param(AtLeastClue("at-least", "A1", 2, ROW, ROW_CELLS), id="AT_LEAST"),
+    pytest.param(AtMostClue("at-most", "A1", 1, ROW, ROW_CELLS), id="AT_MOST"),
+)
+
+
+def _assert_encoder_matches_evaluator(clue: Clue, direct_threshold: int = 64) -> None:
+    """Đối chiếu trên mọi phép gán biến chính và để solver tự gán biến phụ."""
     varmap = VarMap(size=3)
-    encoder = Encoder(varmap=varmap)
+    encoder = Encoder(varmap=varmap, direct_threshold=direct_threshold)
     cnf, _ = encoder.encode([clue])
     solver = DPLLSolver()
+    coords = all_coords(varmap.size)
+    variables = [varmap.coord_to_var(coord) for coord in coords]
 
-    # Thử cả 2 trường hợp A1=True và A1=False
-    for a1_val in (True, False):
-        assign = {"A1": a1_val}
-        eval_res = clue.evaluate(assign)
-        var_a1 = varmap.coord_to_var("A1")
-        sat_res = solver.solve(cnf, assumptions=[var_a1 if a1_val else -var_a1])
-        is_sat = (sat_res.status.name == "SAT")
-        assert eval_res == is_sat, f"Lệch ngữ nghĩa tại A1={a1_val}: eval={eval_res}, sat={is_sat}"
+    for values in product((False, True), repeat=len(coords)):
+        assignment = dict(zip(coords, values))
+        assumptions = [var if value else -var for var, value in zip(variables, values)]
+        expected = SatStatus.SAT if clue.evaluate(assignment) else SatStatus.UNSAT
+
+        result = solver.solve(cnf, assumptions=assumptions)
+
+        assert result.status == expected, f"{clue!r} lệch tại {assignment}"
 
 
-def test_different_encoder_vs_eval() -> None:
-    """Kiểm tra clue DIFFERENT tương đương giữa evaluator và CNF."""
-    clue = DifferentClue("c2", "A1", cell_a="A1", cell_b="B1")
-    varmap = VarMap(size=3)
-    encoder = Encoder(varmap=varmap)
-    cnf, _ = encoder.encode([clue])
-    solver = DPLLSolver()
+@pytest.mark.parametrize("clue", (
+    pytest.param(FACT_A, id="FACT-criminal"),
+    pytest.param(FactClue("innocent", "A1", "A1", Status.INNOCENT), id="FACT-innocent"),
+    pytest.param(SameClue("same", "A1", "A1", "B1"), id="SAME"),
+    pytest.param(DifferentClue("different", "A1", "A1", "B1"), id="DIFFERENT"),
+    *CARDINALITY_CASES,
+    pytest.param(ParityClue("even", "A1", "EVEN", ROW, ROW_CELLS), id="PARITY-even"),
+    pytest.param(ParityClue("odd", "A1", "ODD", ROW, ROW_CELLS), id="PARITY-odd"),
+))
+def test_direct_encoder_vs_eval(clue: Clue) -> None:
+    """Kiểm tra sáu loại manh mối cốt lõi và PARITY qua encoder trực tiếp."""
+    _assert_encoder_matches_evaluator(clue)
 
-    for a1, b1 in itertools.product([True, False], repeat=2):
-        assign = {"A1": a1, "B1": b1}
-        eval_res = clue.evaluate(assign)
-        var_a1 = varmap.coord_to_var("A1")
-        var_b1 = varmap.coord_to_var("B1")
-        assump = [var_a1 if a1 else -var_a1, var_b1 if b1 else -var_b1]
-        sat_res = solver.solve(cnf, assumptions=assump)
-        is_sat = (sat_res.status.name == "SAT")
-        assert eval_res == is_sat
+
+@pytest.mark.xfail(raises=NotImplementedError, reason="Sequential Counter đang chờ triển khai")
+@pytest.mark.parametrize("clue", CARDINALITY_CASES)
+def test_sequential_counter_vs_eval(clue: Clue) -> None:
+    """Ép encoder đi qua nhánh Sequential Counter."""
+    _assert_encoder_matches_evaluator(clue, direct_threshold=0)
+
+
+@pytest.mark.parametrize(("clue", "expected"), COMPOUND_CASES)
+def test_compound_evaluate(clue: CompoundClue, expected: tuple[bool, ...]) -> None:
+    """Đối chiếu evaluate() với bảng chân trị của AND, OR và NOT."""
+    assignments = product((False, True), repeat=2)
+    actual = tuple(clue.evaluate({"A1": a, "B1": b}) for a, b in assignments)
+    assert actual == expected
+
+
+@pytest.mark.xfail(raises=NotImplementedError, reason="Encoder COMPOUND đang chờ triển khai")
+@pytest.mark.parametrize("clue", (
+    pytest.param(AND_AB, id="AND"),
+    pytest.param(OR_NOT_A_B, id="OR-with-NOT"),
+    pytest.param(NOT_A, id="NOT"),
+))
+def test_compound_encoder_vs_eval(clue: CompoundClue) -> None:
+    """Đối chiếu CNF với ngữ nghĩa của manh mối kết hợp."""
+    _assert_encoder_matches_evaluator(clue)
+
+
+def run_tests() -> pytest.ExitCode:
+    """Chạy các test đối chiếu encoder trong file này."""
+    return pytest.main([__file__, "-v", "-rx"])
+
+
+if __name__ == "__main__":
+    raise SystemExit(run_tests())
