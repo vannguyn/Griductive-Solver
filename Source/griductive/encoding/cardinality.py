@@ -5,6 +5,7 @@ from griductive.sat.cnf import Clause
 
 
 def estimate_direct_clauses(n: int, k: int, kind: str) -> int:
+    """Ước lượng số mệnh đề khi mã hóa trực tiếp ràng buộc đếm."""
     kind = kind.upper()
     if kind == "AT_MOST":
         return math.comb(n, k + 1) if 0 <= k < n else 0
@@ -49,6 +50,7 @@ def encode_sequential_counter(
     kind: str,
     varmap: VarMap,
 ) -> list[Clause]:
+    """Mã hóa cận đếm bằng biến phụ ghi nhận số literal đúng trong tiền tố."""
     kind = kind.upper()
     if kind == "AT_MOST":
         return _sequential_at_most(lits, k, varmap)
@@ -68,6 +70,7 @@ def _sequential_at_most(lits: Sequence[int], k: int, varmap: VarMap) -> list[Cla
         return encode_at_most_direct(lits, k)
 
     clauses: list[Clause] = []
+    # previous[j] buộc phải đúng khi tiền tố có ít nhất j + 1 literal đúng.
     previous: tuple[int, ...] = ()
     for index, lit in enumerate(lits):
         if len(previous) == k:
@@ -91,6 +94,7 @@ def encode_cardinality(
     varmap: VarMap,
     direct_threshold: int = 64,
 ) -> list[Clause]:
+    """Dùng mã hóa trực tiếp đến ngưỡng mệnh đề, sau đó dùng bộ đếm tuần tự."""
     kind = kind.upper()
     n = len(lits)
     est = estimate_direct_clauses(n, k, kind)

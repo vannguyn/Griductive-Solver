@@ -3,6 +3,7 @@ from griductive.domain.grid import Coord, coord_to_row_major_index, index_to_coo
 
 class VarMap:
 
+    """Đánh số ô theo từng hàng, rồi cấp ID lớn hơn cho biến phụ."""
     def __init__(self, size: int) -> None:
         self.size = size
         self.num_primary_vars = size * size

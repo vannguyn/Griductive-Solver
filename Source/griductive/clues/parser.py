@@ -21,6 +21,7 @@ def _canonical_coord(coord: Coord) -> Coord:
 
 
 def parse_region_spec(data: dict) -> RegionSpec:
+    """Đọc mô tả vùng từ JSON."""
     if not isinstance(data, dict):
         raise InvalidClueError("region phải là đối tượng JSON")
     kind_str = data.get("kind")
@@ -49,6 +50,7 @@ def parse_region_spec(data: dict) -> RegionSpec:
 
 
 def parse_clue(raw: dict[str, Any], size: int) -> Clue:
+    """Đọc manh mối từ JSON và báo InvalidClueError khi dữ liệu sai."""
     validate_clue_dict(raw, size)
 
     clue_id = raw["id"]
@@ -97,6 +99,7 @@ def parse_clue(raw: dict[str, Any], size: int) -> Clue:
 
 
 def parse_clues(raw_list: list[dict[str, Any]], size: int) -> tuple[Clue, ...]:
+    """Đọc danh sách manh mối JSON theo thứ tự đầu vào."""
     if not isinstance(raw_list, list):
         raise InvalidClueError("clues phải là danh sách")
     return tuple(parse_clue(c, size) for c in raw_list)

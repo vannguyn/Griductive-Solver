@@ -8,11 +8,13 @@ from griductive.sat.cnf import CNF, Clause
 
 class Encoder:
 
+    """Mã hóa manh mối bằng một bản đồ biến SAT dùng chung."""
     def __init__(self, varmap: VarMap, direct_threshold: int = 64) -> None:
         self.varmap = varmap
         self.direct_threshold = direct_threshold
 
     def encode(self, clues: Sequence[Clue]) -> tuple[CNF, EncodingStats]:
+        """Trả về CNF cùng số biến và số mệnh đề."""
         all_clauses: list[Clause] = []
         for clue in clues:
             cls = encode_single_clue(clue, self.varmap, self.direct_threshold)

@@ -50,6 +50,7 @@ def encode_at_most(clue: AtMostClue, varmap: VarMap, direct_threshold: int = 64)
 
 
 def encode_parity(clue: ParityClue, varmap: VarMap, direct_threshold: int = 64) -> list[Clause]:
+    """Mã hóa chẵn lẻ trực tiếp, dùng chuỗi XOR khi vượt ngưỡng mệnh đề."""
     lits = [varmap.coord_to_var(c) for c in clue.region_cells]
     if clue.parity not in ("EVEN", "ODD"):
         return [[]]
@@ -95,6 +96,7 @@ def _and_literal(lits: list[int], varmap: VarMap, clauses: list[Clause]) -> int:
 def _at_most_literal(
     lits: list[int], k: int, varmap: VarMap, threshold: int, clauses: list[Clause],
 ) -> int:
+    """Gắn literal với cận đếm bằng cách mã hóa cận và phủ định của cận."""
     result = varmap.allocate_aux_var()
     satisfied = encode_cardinality(lits, k, "AT_MOST", varmap, threshold)
     violated = encode_cardinality(lits, k + 1, "AT_LEAST", varmap, threshold)
@@ -135,6 +137,7 @@ def _clue_literal(
 
 
 def encode_compound(clue: CompoundClue, varmap: VarMap, direct_threshold: int = 64) -> list[Clause]:
+    """Mã hóa manh mối lồng nhau và khẳng định literal gốc."""
     clauses: list[Clause] = []
     result = _clue_literal(clue, varmap, direct_threshold, clauses)
     clauses.append([result])
@@ -146,6 +149,7 @@ def encode_single_clue(
     varmap: VarMap,
     direct_threshold: int = 64,
 ) -> list[Clause]:
+    """Chọn bộ mã hóa CNF theo loại manh mối."""
     if isinstance(clue, FactClue):
         return encode_fact(clue, varmap)
     elif isinstance(clue, SameClue):

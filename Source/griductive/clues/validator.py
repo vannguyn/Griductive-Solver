@@ -11,6 +11,7 @@ CLUE_TYPES = ("FACT", "SAME", "DIFFERENT", *COUNT_TYPES, "PARITY", "COMPOUND")
 
 
 def validate_clue_dict(data: dict, size: int) -> None:
+    """Kiểm tra các trường của manh mối và báo InvalidClueError nếu sai."""
     if not isinstance(data, dict):
         raise InvalidClueError(f"Dữ liệu clue phải là dict, nhận được: {type(data)}")
 
@@ -70,6 +71,7 @@ def _validate_arity(op: str, count: int) -> None:
 
 
 def validate_clue_object(clue: Clue, size: int) -> None:
+    """Kiểm tra manh mối theo kích thước lưới và ràng buộc của từng loại."""
     if not validate_coord(clue.owner, size):
         raise InvalidClueError(f"Owner {clue.owner} của clue {clue.id} nằm ngoài lưới {size}x{size}")
     for cell in clue.cells():
