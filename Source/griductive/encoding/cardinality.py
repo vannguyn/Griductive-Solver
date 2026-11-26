@@ -45,10 +45,9 @@ def encode_at_most_direct(lits: Sequence[int], k: int) -> list[Clause]:
     clauses: list[Clause] = []
     n = len(lits)
     if k < 0:
-        # Không thể có <= âm -> mệnh đề rỗng (UNSAT)
         return [[]]
     if k >= n:
-        return []  # Luôn thỏa mãn
+        return []
     for subset in itertools.combinations(lits, k + 1):
         clauses.append([-lit for lit in subset])
     return clauses
@@ -60,9 +59,9 @@ def encode_at_least_direct(lits: Sequence[int], k: int) -> list[Clause]:
     clauses: list[Clause] = []
     n = len(lits)
     if k <= 0:
-        return []  # Luôn thỏa mãn
+        return []
     if k > n:
-        return [[]]  # Không thể có >= k > n -> UNSAT
+        return [[]]
     for subset in itertools.combinations(lits, n - k + 1):
         clauses.append([lit for lit in subset])
     return clauses
@@ -96,7 +95,6 @@ def _sequential_at_most(lits: Sequence[int], k: int, varmap: VarMap) -> list[Cla
     clauses: list[Clause] = []
     previous: tuple[int, ...] = ()
     for index, lit in enumerate(lits):
-        # previous[j] is forced when the prefix contains at least j+1 true literals.
         if len(previous) == k:
             clauses.append([-lit, -previous[-1]])
         if index == len(lits) - 1:

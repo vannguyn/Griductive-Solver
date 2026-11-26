@@ -93,7 +93,6 @@ def parse_clue(raw: dict[str, Any], size: int) -> Clue:
             cells = resolve_region(spec, size)
         except InvalidClueError as exc:
             raise InvalidClueError(f"Clue {clue_id!r}: region: {exc}") from exc
-        # Explicit coordinates may use different spellings for the same cell.
         cells = tuple(dict.fromkeys(_canonical_coord(cell) for cell in cells))
         if clue_type == "PARITY":
             return ParityClue(clue_id, owner, raw.get("parity", "EVEN").upper(), spec, cells)

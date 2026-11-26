@@ -159,7 +159,6 @@ def _clue_literal(
         upper = _at_most_literal(lits, clue.k, varmap, threshold, clauses)
         return _and_literal([lower, upper], varmap, clauses)
 
-    # For FACT, SAME and DIFFERENT, reify the small direct CNF clause by clause.
     direct = encode_single_clue(clue, varmap, threshold)
     clause_lits = [-_and_literal([-lit for lit in clause], varmap, clauses) for clause in direct]
     return _and_literal(clause_lits, varmap, clauses)
