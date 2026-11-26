@@ -115,14 +115,23 @@ class GameEngine:
         if outcome.classification == Classification.INCONSISTENT:
             self._solve_status = SolveStatus.INCONSISTENT
             return VerdictOutcome(
+                result=VerdictResult.INCONSISTENT,
+                cell=cell,
+                revealed_clue=None,
+                public_state=self.public_state(),
+                message="Cơ sở tri thức hiện tại bị mâu thuẫn logic (INCONSISTENT): KB không thể thỏa mãn được.",
+            )
+
+        if outcome.classification == Classification.TIMEOUT:
+            return VerdictOutcome(
                 result=VerdictResult.NOT_PROVABLE,
                 cell=cell,
                 revealed_clue=None,
                 public_state=self.public_state(),
-                message="Cơ sở tri thức hiện tại bị mâu thuẫn logic (INCONSISTENT).",
+                message=f"Solver hết thời gian (TIMEOUT) khi kiểm tra {cell}. Hãy thử lại.",
             )
 
-        if outcome.classification in (Classification.UNKNOWN, Classification.TIMEOUT):
+        if outcome.classification == Classification.UNKNOWN:
             return VerdictOutcome(
                 result=VerdictResult.NOT_PROVABLE,
                 cell=cell,

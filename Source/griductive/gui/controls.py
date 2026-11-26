@@ -2,7 +2,7 @@
 
 Tác dụng:
     Cung cấp các thanh giao diện theo chuẩn thiết kế desktop puzzle game:
-    - HeaderBar: Logo game, bộ chọn Daily Case / Level, trạng thái vụ án và nút tải file.
+    - HeaderBar: Logo game, bộ chọn Daily Case / Level và trạng thái vụ án.
     - ClueBanner: Dải băng hiển thị manh mối / suy luận trọng tâm bên dưới bàn cờ.
     - BottomBar: Các nút chức năng [ GHI CHÚ ], [ GỢI Ý ], [ TỰ ĐỘNG GIẢI ], [ CHƠI LẠI ].
     - Tương thích 100% với ControlPanel API của MainWindow.
@@ -118,27 +118,6 @@ class HeaderBar(QWidget):
             letter-spacing: 0.5px;
         """)
         layout.addWidget(self.status_badge)
-
-        # 4. Nút tải file tùy ý
-        self.btn_load = QPushButton("📁 Tải file JSON...", self)
-        self.btn_load.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_load.setStyleSheet("""
-            QPushButton {
-                background-color: #222834;
-                color: #E2E8F0;
-                border: 1px solid #3B465A;
-                border-radius: 8px;
-                padding: 6px 14px;
-                font-size: 11px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #2D3748;
-                border-color: #64748B;
-            }
-        """)
-        self.btn_load.clicked.connect(self.load_requested.emit)
-        layout.addWidget(self.btn_load)
 
     def _on_combo_changed(self, index: int) -> None:
         path = self.level_combo.itemData(index)
@@ -382,5 +361,4 @@ class ControlPanel(QWidget):
 
     def set_auto_running(self, running: bool) -> None:
         self.bottom.set_auto_running(running)
-        self.header.btn_load.setEnabled(not running)
         self.header.level_combo.setEnabled(not running)

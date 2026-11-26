@@ -221,3 +221,7 @@ __marimo__/
 
 .pytest
 .pytest-*
+
+# Local pytest temporary directories used by the Windows test runner
+Source/tests/.tmp*/
+tmp/

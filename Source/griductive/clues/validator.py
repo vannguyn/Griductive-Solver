@@ -19,14 +19,14 @@ Người phụ trách: Nhật Tân (CNF Encoding & Clue Parsing/Validation).
 
 from griductive.clues.base import Clue
 from griductive.clues.core import AtLeastClue, AtMostClue, ExactlyClue
-from griductive.clues.extensions import CompoundClue, ParityClue
+from griductive.clues.extensions import CompareCountClue, CompoundClue, ParityClue
 from griductive.domain.errors import InvalidClueError
 from griductive.domain.grid import validate_coord
 from griductive.domain.types import Status
 
 
 COUNT_TYPES = ("EXACTLY", "AT_LEAST", "AT_MOST")
-CLUE_TYPES = ("FACT", "SAME", "DIFFERENT", *COUNT_TYPES, "PARITY", "COMPOUND")
+CLUE_TYPES = ("FACT", "SAME", "DIFFERENT", *COUNT_TYPES, "PARITY", "COMPOUND", "COMPARE_COUNT")
 
 
 def validate_clue_dict(data: dict, size: int) -> None:
@@ -66,6 +66,14 @@ def validate_clue_dict(data: dict, size: int) -> None:
             if not isinstance(children, list):
                 raise InvalidClueError("sub_clues phải là danh sách")
             _validate_arity(op, len(children))
+        elif clue_type == "COMPARE_COUNT":
+            _validate_choice(data, "op", "EQUAL", ("GREATER", "LESS", "EQUAL"))
+            region_left = data.get("region_left")
+            region_right = data.get("region_right")
+            if not isinstance(region_left, dict):
+                raise InvalidClueError("region_left phải là đối tượng JSON mô tả vùng")
+            if not isinstance(region_right, dict):
+                raise InvalidClueError("region_right phải là đối tượng JSON mô tả vùng")
     except InvalidClueError as exc:
         raise InvalidClueError(f"Clue {data['id']!r}: {exc}") from exc
 
@@ -107,3 +115,10 @@ def validate_clue_object(clue: Clue, size: int) -> None:
         _validate_arity(clue.op, len(clue.sub_clues))
         for child in clue.sub_clues:
             validate_clue_object(child, size)
+    elif isinstance(clue, CompareCountClue):
+        if clue.op not in ("GREATER", "LESS", "EQUAL"):
+            raise InvalidClueError(f"Clue {clue.id!r}: op không hợp lệ: {clue.op!r}")
+        if not clue.region_left_cells:
+            raise InvalidClueError(f"Clue {clue.id!r}: region_left không được rỗng")
+        if not clue.region_right_cells:
+            raise InvalidClueError(f"Clue {clue.id!r}: region_right không được rỗng")

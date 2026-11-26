@@ -75,6 +75,18 @@ def test_forced_wrong_verdict_is_contradicted(engine: GameEngine) -> None:
     assert engine.public_state() == before
 
 
+def test_inconsistent_kb_has_distinct_verdict_result(engine: GameEngine) -> None:
+    """A contradictory public KB is not reported as an ordinary wrong verdict."""
+    engine._cell_statuses["A1"] = Status.INNOCENT  # type: ignore[attr-defined]
+    engine._revealed_cells.update({"B1", "C1"})  # type: ignore[attr-defined]
+    engine._cell_statuses["B1"] = Status.INNOCENT  # type: ignore[attr-defined]
+    engine._cell_statuses["C1"] = Status.INNOCENT  # type: ignore[attr-defined]
+    outcome = engine.submit_verdict("B2", Status.INNOCENT)
+    assert outcome.result == VerdictResult.INCONSISTENT
+    assert outcome.revealed_clue is None
+    assert outcome.public_state.solve_status == SolveStatus.INCONSISTENT
+
+
 def test_unprovable_verdict_is_not_provable(engine: GameEngine) -> None:
     """Chưa đủ dữ kiện -> NOT_PROVABLE (kể cả khi đoán trúng), trạng thái giữ nguyên."""
     before = engine.public_state()

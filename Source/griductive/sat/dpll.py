@@ -97,15 +97,21 @@ class DPLLSolver:
             """Tìm model hoàn chỉnh hoặc kết luận UNSAT."""
             nonlocal decisions, backtracks
 
+            # Áp dụng assumptions trước và ghi nhớ checkpoint SAU khi set assumptions,
+            # để backtracking không bao giờ xóa nhầm các phép gán của assumptions.
             for literal in assumptions:
                 check_deadline()
                 variable = abs(literal)
                 value = literal > 0
-                if assignment.get(variable, value) != value:
+                existing = assignment.get(variable)
+                if existing is not None and existing != value:
+                    # Conflict ngay từ assumptions -> UNSAT tức thì
                     return None
                 assignment[variable] = value
 
+            # Checkpoint sau khi set toàn bộ assumptions.
             # Mỗi mục lưu một nhánh False chưa thử và kích thước phép gán trước khi rẽ nhánh.
+            assumption_checkpoint = len(assignment)
             alternatives: list[tuple[int, int]] = []
             while True:
                 consistent, branch_variable = propagate()
@@ -122,7 +128,9 @@ class DPLLSolver:
                 elif alternatives:
                     branch_variable, checkpoint = alternatives.pop()
                     # dict.popitem() hoàn tác các phép gán theo thứ tự ngược.
-                    while len(assignment) > checkpoint:
+                    # Không được pop quá assumption_checkpoint để giữ nguyên assumptions.
+                    safe_checkpoint = max(checkpoint, assumption_checkpoint)
+                    while len(assignment) > safe_checkpoint:
                         check_deadline()
                         assignment.popitem()
                     assignment[branch_variable] = False

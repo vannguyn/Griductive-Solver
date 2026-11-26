@@ -17,7 +17,27 @@ python main.py
 
 ```bash
 cd Source
-pytest
+pytest -q
+```
+
+## Validate a Puzzle
+
+The validator checks the schema, uniqueness, and whether the public deduction
+agent solves the puzzle without guessing:
+
+```bash
+cd Source
+python main.py --validate --puzzle puzzles/3x3/p01.json
+```
+
+## Run the Benchmark Suite
+
+This evaluates every JSON puzzle under `puzzles/` and writes CSV, LaTeX, and
+runtime-chart outputs to `results/`:
+
+```bash
+cd Source
+python main.py --benchmark
 ```
 
 Implement the modules in dependency order: `domain`, `clues`, `sat`,

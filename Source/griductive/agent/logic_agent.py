@@ -75,7 +75,7 @@ class LogicAgent:
                 trace.solve_status = SolveStatus.SOLVED
                 break
 
-            wave_counter += 1
+            candidate_wave = wave_counter + 1
             pk = PublicKnowledge.from_public_state(current_state)
             cnf_kb, varmap, _ = build_kb_cnf(pk)
 
@@ -93,6 +93,7 @@ class LogicAgent:
             forced_status = None
             forced_outcome = None
             step_start = time.perf_counter()
+            timed_out_in_scan = False
 
             for coord in all_coords(pk.size):
                 if coord in pk.proved_verdicts:
@@ -102,7 +103,7 @@ class LogicAgent:
                 outcome = classify(cnf_kb, var_id, self.solver, deadline)
 
                 if outcome.classification == Classification.TIMEOUT:
-                    trace.solve_status = SolveStatus.TIMEOUT
+                    timed_out_in_scan = True
                     break
                 elif outcome.classification in (Classification.CRIMINAL, Classification.INNOCENT):
                     forced_cell = coord
@@ -110,7 +111,8 @@ class LogicAgent:
                     forced_outcome = outcome
                     break
 
-            if trace.solve_status == SolveStatus.TIMEOUT:
+            if timed_out_in_scan:
+                trace.solve_status = SolveStatus.TIMEOUT
                 break
 
             # 3. Nếu không có ô nào forced -> STUCK (không đoán mò)
@@ -122,6 +124,11 @@ class LogicAgent:
             step_counter += 1
             outcome = game.submit_verdict(forced_cell, forced_status)
             step_runtime_ms = (time.perf_counter() - step_start) * 1000.0
+
+            # A wave counts only after it produces an accepted reveal.  This keeps
+            # timeout/stuck traces from reporting a phantom wave.
+            if outcome.result == VerdictResult.ACCEPTED:
+                wave_counter = candidate_wave
 
             # Ghi nhận queries cho TraceStep
             trace_queries = tuple(
@@ -136,7 +143,7 @@ class LogicAgent:
             active_ids = tuple(c.id for c in pk.revealed_clues)
             trace_step = TraceStep(
                 step=step_counter,
-                wave=wave_counter,
+                wave=candidate_wave,
                 cell=forced_cell,
                 classification=forced_outcome.classification,
                 active_clue_ids=active_ids,

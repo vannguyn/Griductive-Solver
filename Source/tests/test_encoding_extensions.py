@@ -31,6 +31,30 @@ NESTED = _raw(
 )
 
 
+@pytest.mark.parametrize("op", ["GREATER", "LESS", "EQUAL"])
+@pytest.mark.parametrize("threshold", [0, 64])
+def test_compare_count_encoding_matches_evaluator(op, threshold):
+    raw = _raw(
+        "COMPARE_COUNT",
+        op=op,
+        region_left={"kind": "explicit", "cells": ["A1", "B1"]},
+        region_right={"kind": "explicit", "cells": ["A2", "B2", "C2"]},
+    )
+    clue = parse_clue(raw, 3)
+    varmap = VarMap(3)
+    cnf, _ = Encoder(varmap, direct_threshold=threshold).encode([clue])
+    solver = DPLLSolver()
+
+    for values in product((False, True), repeat=len(clue.cells())):
+        assignment = dict(zip(clue.cells(), values))
+        assumptions = [
+            varmap.coord_to_var(cell) * (1 if value else -1)
+            for cell, value in assignment.items()
+        ]
+        expected = SatStatus.SAT if clue.evaluate(assignment) else SatStatus.UNSAT
+        assert solver.solve(cnf, assumptions=assumptions).status == expected
+
+
 @pytest.mark.parametrize("threshold", [0, 64])
 @pytest.mark.parametrize(
     "raw",

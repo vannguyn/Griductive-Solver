@@ -25,7 +25,7 @@ from griductive.clues.core import (
     FactClue,
     SameClue,
 )
-from griductive.clues.extensions import CompoundClue, ParityClue
+from griductive.clues.extensions import CompareCountClue, CompoundClue, ParityClue
 from griductive.clues.validator import COUNT_TYPES, validate_clue_dict, validate_clue_object
 from griductive.domain.errors import InvalidClueError
 from griductive.domain.grid import Coord, format_coord, parse_coord
@@ -111,6 +111,26 @@ def parse_clue(raw: dict[str, Any], size: int) -> Clue:
             except InvalidClueError as exc:
                 raise InvalidClueError(f"Clue {clue_id!r}: sub_clues[{index}]: {exc}") from exc
         return CompoundClue(clue_id, owner, op=op, sub_clues=tuple(sub_clues))
+
+    elif clue_type == "COMPARE_COUNT":
+        op = raw.get("op", "EQUAL").upper()
+        try:
+            spec_left = parse_region_spec(raw.get("region_left"))
+            cells_left = resolve_region(spec_left, size)
+            cells_left = tuple(dict.fromkeys(_canonical_coord(c) for c in cells_left))
+        except InvalidClueError as exc:
+            raise InvalidClueError(f"Clue {clue_id!r}: region_left: {exc}") from exc
+        try:
+            spec_right = parse_region_spec(raw.get("region_right"))
+            cells_right = resolve_region(spec_right, size)
+            cells_right = tuple(dict.fromkeys(_canonical_coord(c) for c in cells_right))
+        except InvalidClueError as exc:
+            raise InvalidClueError(f"Clue {clue_id!r}: region_right: {exc}") from exc
+        clue_obj = CompareCountClue(clue_id, owner, op=op,
+                                    region_left_cells=cells_left,
+                                    region_right_cells=cells_right)
+        validate_clue_object(clue_obj, size)
+        return clue_obj
 
     else:
         raise InvalidClueError(f"Loại clue chưa được hỗ trợ: {clue_type}")

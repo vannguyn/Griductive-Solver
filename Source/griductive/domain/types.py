@@ -53,11 +53,13 @@ class VerdictResult(str, Enum):
     - ACCEPTED: Verdict đúng và được chứng minh bởi KB hiện tại -> ô được lật.
     - NOT_PROVABLE: Chưa đủ cơ sở logic suy luận từ clue đã lộ (không được đoán).
     - CONTRADICTED: Trái ngược với kết luận bắt buộc bị ép bởi KB hiện tại.
+    - INCONSISTENT: KB hiện tại tự mâu thuẫn, nên không thể chứng minh verdict.
     - ALREADY_REVEALED: Ô này đã được lật mở trước đó.
     """
     ACCEPTED = "ACCEPTED"
     NOT_PROVABLE = "NOT_PROVABLE"
     CONTRADICTED = "CONTRADICTED"
+    INCONSISTENT = "INCONSISTENT"
     ALREADY_REVEALED = "ALREADY_REVEALED"
 
 

@@ -173,6 +173,13 @@
   } else {
     align
   }
+  // Accept both the original flat cell sequence and the more readable
+  // row-oriented form: ((cell, cell, ...), (cell, cell, ...), ...).
+  let cells = if data.len() > 0 and type(data.at(0)) == array {
+    data.map(row => row).flatten()
+  } else {
+    data
+  }
   let content = table(
     columns: columns,
     align: column_align,
@@ -186,7 +193,7 @@
     },
     inset: inset,
     table.header(..header.map(h => text(fill: white, weight: "bold", h))),
-    ..data,
+    ..cells,
   )
 
   if caption != none {

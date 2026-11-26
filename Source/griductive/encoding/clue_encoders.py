@@ -8,6 +8,7 @@ Tác dụng:
     - EXACTLY, AT_LEAST, AT_MOST: gọi cardinality.encode_cardinality
     - PARITY: cấm các cấu hình chẵn hoặc lẻ trái quy định
     - COMPOUND: Tseitin transformation hoặc liên kết logic AND/OR/NOT
+    - COMPARE_COUNT: so sánh số lượng Criminal giữa 2 vùng qua reified AT_LEAST literals
 
 Input:
     Đối tượng Clue, đối tượng VarMap, và direct_threshold.
@@ -30,7 +31,7 @@ from griductive.clues.core import (
     FactClue,
     SameClue,
 )
-from griductive.clues.extensions import CompoundClue, ParityClue
+from griductive.clues.extensions import CompareCountClue, CompoundClue, ParityClue
 from griductive.domain.types import Status
 from griductive.encoding.cardinality import encode_cardinality
 from griductive.encoding.varmap import VarMap
@@ -112,7 +113,17 @@ def _parity_literal(clue: ParityClue, varmap: VarMap, clauses: list[Clause]) -> 
 
 
 def _and_literal(lits: list[int], varmap: VarMap, clauses: list[Clause]) -> int:
-    """Return a literal equivalent to the conjunction, including empty AND."""
+    """Return a literal equivalent to the conjunction of lits (AND), including empty AND = True.
+
+    - len == 0: vacuously True -> allocate a fresh aux var forced True with [result].
+    - len == 1: return lits[0] directly (no extra variable).
+    - len >= 2: Tseitin AND gate.
+    """
+    if not lits:
+        # AND of zero sub-clauses is vacuously True.
+        result = varmap.allocate_aux_var()
+        clauses.append([result])   # force result = True
+        return result
     if len(lits) == 1:
         return lits[0]
     result = varmap.allocate_aux_var()
@@ -173,6 +184,100 @@ def encode_compound(clue: CompoundClue, varmap: VarMap, direct_threshold: int = 
     return clauses
 
 
+def _reify_at_least(
+    lits: list[int],
+    k: int,
+    varmap: VarMap,
+    clauses: list[Clause],
+    direct_threshold: int,
+) -> int:
+    """Tạo auxiliary literal r sao cho r = True  <=>  sum(lits) >= k.
+
+    Encode hai chiều:
+      r -> AT_LEAST(k):  NOT r OR (mỗi clause của AT_LEAST đều thỏa)
+      NOT r -> AT_MOST(k-1):  r OR (mỗi clause của AT_MOST(k-1) đều thỏa)
+    """
+    if k <= 0:
+        # sum >= 0 luôn True
+        r = varmap.allocate_aux_var()
+        clauses.append([r])
+        return r
+    if k > len(lits):
+        # sum >= k > n luôn False
+        r = varmap.allocate_aux_var()
+        clauses.append([-r])
+        return r
+
+    r = varmap.allocate_aux_var()
+
+    # r -> AT_LEAST(k): với mỗi clause c của AT_LEAST(k), thêm (NOT r OR c)
+    for c in encode_cardinality(lits, k, "AT_LEAST", varmap, direct_threshold):
+        clauses.append([-r] + list(c))
+
+    # NOT r -> AT_MOST(k-1): với mỗi clause c của AT_MOST(k-1), thêm (r OR c)
+    for c in encode_cardinality(lits, k - 1, "AT_MOST", varmap, direct_threshold):
+        clauses.append([r] + list(c))
+
+    return r
+
+
+def encode_compare_count(
+    clue: CompareCountClue, varmap: VarMap, direct_threshold: int = 64
+) -> list[Clause]:
+    """Mã hóa clue COMPARE_COUNT: sum(left) op sum(right), op in GREATER/LESS/EQUAL.
+
+    Phương pháp reified AT_LEAST:
+      Dùng các literal reified r_L(k) = "sum(left) >= k" và
+      r_R(k) = "sum(right) >= k"; k = 0 được dùng cho bất đẳng thức nghiêm ngặt.
+
+      GREATER (left > right):
+        <=> For every k in 0..|right|, right >= k implies left >= k+1.
+        => clause: [-r_R(k), r_L(k+1)]
+
+      LESS (left < right):
+        <=> For every k in 0..|left|, left >= k implies right >= k+1.
+        => clause: [-r_L(k), r_R(k+1)]
+
+      EQUAL (left == right):
+        <=> For all k: r_L <=> r_R
+        => clauses: [r_L, -r_R] AND [-r_L, r_R]
+    """
+    left_lits = [varmap.coord_to_var(c) for c in clue.region_left_cells]
+    right_lits = [varmap.coord_to_var(c) for c in clue.region_right_cells]
+    n, m = len(left_lits), len(right_lits)
+    op = clue.op  # "GREATER", "LESS", "EQUAL"
+
+    clauses: list[Clause] = []
+    max_k = max(n, m)
+
+    if op == "GREATER":
+        for k in range(0, m + 1):
+            r_right = _reify_at_least(
+                right_lits, k, varmap, clauses, direct_threshold
+            )
+            r_left_next = _reify_at_least(
+                left_lits, k + 1, varmap, clauses, direct_threshold
+            )
+            clauses.append([-r_right, r_left_next])
+    elif op == "LESS":
+        for k in range(0, n + 1):
+            r_left = _reify_at_least(
+                left_lits, k, varmap, clauses, direct_threshold
+            )
+            r_right_next = _reify_at_least(
+                right_lits, k + 1, varmap, clauses, direct_threshold
+            )
+            clauses.append([-r_left, r_right_next])
+    elif op == "EQUAL":
+        for k in range(1, max_k + 1):
+            r_L = _reify_at_least(left_lits, k, varmap, clauses, direct_threshold)
+            r_R = _reify_at_least(right_lits, k, varmap, clauses, direct_threshold)
+            clauses.append([r_L, -r_R])
+            clauses.append([-r_L, r_R])
+
+    return clauses
+
+
 def encode_single_clue(
     clue: Clue,
     varmap: VarMap,
@@ -195,5 +300,7 @@ def encode_single_clue(
         return encode_parity(clue, varmap, direct_threshold)
     elif isinstance(clue, CompoundClue):
         return encode_compound(clue, varmap, direct_threshold)
+    elif isinstance(clue, CompareCountClue):
+        return encode_compare_count(clue, varmap, direct_threshold)
     else:
         raise NotImplementedError(f"Chưa hỗ trợ encoder cho loại clue: {clue.clue_type}")

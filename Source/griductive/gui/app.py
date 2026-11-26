@@ -20,7 +20,6 @@ from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QColor, QFont, QPalette
 from PyQt6.QtWidgets import (
     QApplication,
-    QFileDialog,
     QMainWindow,
     QMessageBox,
     QScrollArea,
@@ -130,14 +129,14 @@ class MainWindow(QMainWindow):
         self.bottom_bar = BottomBar(self)
         main_layout.addWidget(self.bottom_bar)
 
-        # Duy trì CluePanel và ControlPanel ẩn cho tương thích
+        # CluePanel chỉ giữ dữ liệu clue cho Hint và xử lý spotlight khi click
+        # vào thẻ đã mở; không hiển thị thành một vùng panel riêng trên GUI.
         self.clue_panel = CluePanel(self)
         self.clue_panel.hide()
         self.control_panel = ControlPanel(self)
         self.control_panel.hide()
 
         # Kết nối sự kiện
-        self.header_bar.load_requested.connect(self._on_load_puzzle)
         self.header_bar.level_selected.connect(self._on_preset_level_selected)
         self.board_view.cell_submitted.connect(self._on_cell_submitted)
         self.board_view.cell_inspected.connect(self._on_cell_inspected)
@@ -154,6 +153,7 @@ class MainWindow(QMainWindow):
         self._timer.timeout.connect(self._on_auto_solve_tick)
         self._current_spotlight_owner: Coord | None = None
         self._victory_epoch = 0
+        self._manual_step_count = 0
 
         # Tự động nạp màn Tutorial mẫu khi khởi động để trải nghiệm ngay
         self._on_preset_level_selected("3x3/tutorial.json")
@@ -184,13 +184,17 @@ class MainWindow(QMainWindow):
             else:
                 self._reset_highlights()
 
-    def _schedule_victory_dialog(self, title: str, message: str) -> None:
-        """Hiển thị hộp thoại chiến thắng sau khi hiệu ứng lật thẻ cuối hoàn tất."""
+    def _schedule_victory_dialog(self, steps: int) -> None:
+        """Hiển thị duy nhất một thông báo hoàn tất sau hiệu ứng lật thẻ cuối."""
         epoch = self._victory_epoch
 
         def _show() -> None:
             if epoch == self._victory_epoch:
-                QMessageBox.information(self, title, message)
+                QMessageBox.information(
+                    self,
+                    "VỤ ÁN HOÀN TẤT!",
+                    f"Đã giải xong trong {steps} bước suy luận.",
+                )
 
         QTimer.singleShot(FLIP_DURATION_MS + 60, _show)
 
@@ -206,29 +210,6 @@ class MainWindow(QMainWindow):
         return None
 
     # ------------------------------------------------------------- Events
-    def _on_load_puzzle(self) -> None:
-        """Mở hộp thoại chọn file JSON puzzle tùy ý."""
-        default_dir = str(Path(__file__).resolve().parent.parent.parent / "puzzles")
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Chọn file vụ án (Puzzle JSON)", default_dir, "JSON Files (*.json)"
-        )
-        if not file_path:
-            return
-        self._stop_auto_solve()
-        try:
-            state = self.session.load_puzzle(file_path)
-        except GriductiveError as e:
-            QMessageBox.critical(self, "Lỗi nạp file", f"Không thể nạp vụ án: {e}")
-            return
-        except Exception as e:
-            QMessageBox.critical(self, "Lỗi nạp file", f"Không thể nạp vụ án: {e}")
-            return
-
-        self._victory_epoch += 1
-        self._reset_highlights()
-        self._show_state(state)
-        self.statusBar().showMessage(f"Đã nạp vụ án: {state.puzzle_id}", 4000)
-
     def _on_preset_level_selected(self, rel_path: str) -> None:
         """Nạp vụ án từ bộ chọn danh sách level nhanh."""
         file_path = Path(__file__).resolve().parent.parent.parent / "puzzles" / rel_path
@@ -242,6 +223,7 @@ class MainWindow(QMainWindow):
             return
 
         self._victory_epoch += 1
+        self._manual_step_count = 0
         self._reset_highlights()
         self._show_state(state)
 
@@ -251,6 +233,7 @@ class MainWindow(QMainWindow):
             return
         self._stop_auto_solve()
         self._victory_epoch += 1
+        self._manual_step_count = 0
         state = self.session.restart()
         self._reset_highlights()
         self._show_state(state)
@@ -274,6 +257,15 @@ class MainWindow(QMainWindow):
         else:
             self._reset_highlights()
 
+    def _on_clue_selected(self, cells: tuple[Coord, ...]) -> None:
+        """Highlight các ô được clue chọn trong CluePanel tham chiếu."""
+        self._current_spotlight_owner = None
+        self.clue_banner.display_message(
+            "CLUE ĐÃ CHỌN",
+            "Các ô liên quan đã được tô sáng trên bàn cờ.",
+        )
+        self.board_view.highlight_cells(cells)
+
     def _on_cell_submitted(self, cell: Coord, status: Status) -> None:
         """Người chơi đưa ra phán quyết về một nghi phạm."""
         if not self.session.has_active_game or self.bottom_bar.is_auto_running:
@@ -286,18 +278,21 @@ class MainWindow(QMainWindow):
             return
 
         if outcome.result == VerdictResult.ACCEPTED:
+            self._manual_step_count += 1
             self._show_state(outcome.public_state, new_owner=outcome.cell)
             self.statusBar().showMessage(outcome.message, 4000)
             if outcome.public_state.solve_status == SolveStatus.SOLVED or outcome.public_state.is_all_revealed():
-                self._schedule_victory_dialog(
-                    "VỤ ÁN HOÀN TẤT!",
-                    "Chúc mừng Thám tử! Bạn đã dùng suy luận logic thuần túy để vạch trần mọi tội phạm!",
-                )
+                self._schedule_victory_dialog(self._manual_step_count)
             return
 
         # Phán quyết bị từ chối: rung lắc thẻ và hiển thị phản hồi trên banner
         self.board_view.shake_cell(cell)
-        title = "CHƯA ĐỦ BẰNG CHỨNG" if outcome.result == VerdictResult.NOT_PROVABLE else "MÂU THUẪN LOGIC"
+        if outcome.result == VerdictResult.NOT_PROVABLE:
+            title = "CHƯA ĐỦ BẰNG CHỨNG"
+        elif outcome.result == VerdictResult.INCONSISTENT:
+            title = "MÂU THUẪN LOGIC"
+        else:
+            title = "PHÁN QUYẾT BỊ BÁC"
         self.clue_banner.display_message(title, outcome.message, is_warning=True)
         self.statusBar().showMessage(outcome.message, 5000)
 
@@ -381,10 +376,7 @@ class MainWindow(QMainWindow):
         self.header_bar.set_status_text(f"● {text.upper()}")
 
         if final_status == SolveStatus.SOLVED:
-            self._schedule_victory_dialog(
-                "VỤ ÁN HOÀN TẤT!",
-                f"Tác tử logic đã giải xong vụ án qua {len(last.trace.steps)} bước suy luận thuần túy!",
-            )
+            self._schedule_victory_dialog(len(last.trace.steps))
         else:
             QMessageBox.information(self, "Tự động giải kết thúc", text)
 

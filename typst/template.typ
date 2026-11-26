@@ -208,7 +208,10 @@
     justify: true,
     leading: 0.72em,    // Dãn dòng ≈ 1.35 (khớp LaTeX \setstretch{1.35})
     spacing: 1.6em,     // Khoảng cách giữa đoạn — thoải mái giống LaTeX
-    first-line-indent: (amount: 1.27cm, all: false),
+    // Thụt dòng đầu cho cả đoạn đầu tiên sau mỗi heading và các đoạn tiếp theo.
+    // Các component đặc biệt như bảng, danh sách, code block và callout
+    // tự đặt lại về 0pt ở phạm vi riêng của chúng.
+    first-line-indent: (amount: 1.27cm, all: true),
   )
 
   // List/Enum: lề trên dưới khối 20pt, khoảng cách giữa các items 18pt chuẩn LaTeX
@@ -462,6 +465,8 @@
     // 3. Chuẩn bị nội dung chính
     counter(page).update(1)
     set page(numbering: "1")
+    // Khôi phục thụt dòng cho phần nội dung sau khi mục lục đã dùng 0pt.
+    set par(first-line-indent: (amount: 1.27cm, all: true))
     show: chic_setup
 
     body
