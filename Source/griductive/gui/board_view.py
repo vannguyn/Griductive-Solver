@@ -121,6 +121,9 @@ class BoardView(QWidget):
             item = self.grid_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                if isinstance(widget, CharacterCardWidget):
+                    widget.stop_animations()
+                widget.hide()
                 widget.deleteLater()
 
         self._card_widgets.clear()

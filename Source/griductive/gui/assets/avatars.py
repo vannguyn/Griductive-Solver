@@ -7,7 +7,10 @@ Tác dụng:
 """
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPixmap
+from PyQt6.QtGui import QBrush, QColor, QGuiApplication, QPainter, QPainterPath, QPen, QPixmap
+
+_AVATAR_CACHE: dict[tuple[str, int, float, int], QPixmap] = {}
+_MAX_AVATAR_CACHE_ENTRIES = 256
 
 # Bảng phối màu palette editorial ấm cúng
 PALETTE = {
@@ -58,9 +61,19 @@ CHARACTER_PROFILES = {
 }
 
 
-def get_character_avatar(name: str, size: int = 80) -> QPixmap:
-    """Tạo QPixmap vẽ chân dung độc bản của nhân vật theo kích thước mong muốn."""
-    pixmap = QPixmap(size, size)
+def get_character_avatar(name: str, size: int = 80, dpr: float = 1.0) -> QPixmap:
+    """Tạo QPixmap vẽ chân dung độc bản của nhân vật theo kích thước mong muốn (có cache)."""
+    dpr_norm = max(1.0, round(float(dpr), 2))
+    app = QGuiApplication.instance()
+    app_id = id(app) if app is not None else 0
+    cache_key = (name, size, dpr_norm, app_id)
+    cached = _AVATAR_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    px_size = max(1, round(size * dpr_norm))
+    pixmap = QPixmap(px_size, px_size)
+    pixmap.setDevicePixelRatio(dpr_norm)
     pixmap.fill(Qt.GlobalColor.transparent)
 
     painter = QPainter(pixmap)
@@ -155,4 +168,8 @@ def get_character_avatar(name: str, size: int = 80) -> QPixmap:
         painter.drawRoundedRect(QRectF(size * 0.26, size * 0.18, size * 0.48, size * 0.14), size * 0.06, size * 0.06)
 
     painter.end()
+    if app is not None:
+        if len(_AVATAR_CACHE) >= _MAX_AVATAR_CACHE_ENTRIES:
+            _AVATAR_CACHE.clear()
+        _AVATAR_CACHE[cache_key] = pixmap
     return pixmap
