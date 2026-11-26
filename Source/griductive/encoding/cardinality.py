@@ -1,24 +1,3 @@
-"""Cardinality constraint encoders (AtLeast, AtMost, Exactly).
-
-Tác dụng:
-    Mã hóa các ràng buộc đếm số lượng (Cardinality Constraints) sang CNF:
-    - sum(lits) <= k (AT_MOST)
-    - sum(lits) >= k (AT_LEAST)
-    - sum(lits) == k (EXACTLY)
-    Tự động ước lượng số lượng clause:
-    - Nếu số clause ước tính <= direct_threshold (mặc định 64): Dùng mã hóa tổ hợp trực tiếp (Direct/Combinatorial Encoding, không cần biến phụ).
-    - Nếu vượt quá ngưỡng: Tự động chuyển sang Sequential Counter (Sinz, 2005) dùng biến phụ để tránh bùng nổ số lượng mệnh đề O(2^N).
-
-Input:
-    Danh sách literal (lits: Sequence[int]), ngưỡng k, loại ràng buộc (kind), đối tượng VarMap, và direct_threshold.
-
-Output:
-    Danh sách các mệnh đề list[Clause] bổ sung vào CNF.
-    Được clue_encoders sử dụng.
-
-Người phụ trách: Nhật Tân (CNF Encoding & Clue Parsing/Validation).
-"""
-
 import math
 from collections.abc import Sequence
 from griductive.encoding.varmap import VarMap
@@ -26,7 +5,6 @@ from griductive.sat.cnf import Clause
 
 
 def estimate_direct_clauses(n: int, k: int, kind: str) -> int:
-    """Ước lượng số lượng mệnh đề nếu dùng tổ hợp trực tiếp C(n, k+1) hoặc C(n, n-k+1)."""
     kind = kind.upper()
     if kind == "AT_MOST":
         return math.comb(n, k + 1) if 0 <= k < n else 0
@@ -40,7 +18,6 @@ def estimate_direct_clauses(n: int, k: int, kind: str) -> int:
 
 
 def encode_at_most_direct(lits: Sequence[int], k: int) -> list[Clause]:
-    """Mã hóa sum(lits) <= k bằng cách cấm mọi tập con cỡ k+1 literal cùng True."""
     import itertools
     clauses: list[Clause] = []
     n = len(lits)
@@ -54,7 +31,6 @@ def encode_at_most_direct(lits: Sequence[int], k: int) -> list[Clause]:
 
 
 def encode_at_least_direct(lits: Sequence[int], k: int) -> list[Clause]:
-    """Mã hóa sum(lits) >= k bằng cách cấm mọi tập con cỡ n-k+1 literal cùng False."""
     import itertools
     clauses: list[Clause] = []
     n = len(lits)
@@ -73,7 +49,6 @@ def encode_sequential_counter(
     kind: str,
     varmap: VarMap,
 ) -> list[Clause]:
-    """Mã hóa ràng buộc cardinality bằng Sequential Counter (Sinz 2005) dùng biến phụ."""
     kind = kind.upper()
     if kind == "AT_MOST":
         return _sequential_at_most(lits, k, varmap)
@@ -116,7 +91,6 @@ def encode_cardinality(
     varmap: VarMap,
     direct_threshold: int = 64,
 ) -> list[Clause]:
-    """Mã hóa tổng quát ràng buộc đếm số lượng sang CNF."""
     kind = kind.upper()
     n = len(lits)
     est = estimate_direct_clauses(n, k, kind)

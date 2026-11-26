@@ -1,20 +1,3 @@
-"""Clue JSON/dict parser and registry.
-
-Tác dụng:
-    Chuyển đổi dữ liệu từ điển thô (đọc từ file JSON puzzle) thành các đối tượng Clue cụ thể.
-    Sử dụng cơ chế Registry theo trường "type" ("FACT", "SAME", "EXACTLY", "PARITY"...),
-    tự động phân giải vùng (resolve_region) và gán các tham số tương ứng.
-
-Input:
-    Dictionary thô từ JSON (raw: dict) và kích thước lưới (size: int).
-
-Output:
-    Đối tượng Clue cụ thể (FactClue, ExactlyClue, ParityClue...).
-    Được gọi bởi engine/loader.py khi tải puzzle.
-
-Người phụ trách: Nhật Tân (CNF Encoding & Clue Parsing/Validation).
-"""
-
 from typing import Any
 from griductive.clues.base import Clue
 from griductive.clues.core import (
@@ -38,7 +21,6 @@ def _canonical_coord(coord: Coord) -> Coord:
 
 
 def parse_region_spec(data: dict) -> RegionSpec:
-    """Chuyển đổi dictionary vùng thành đối tượng RegionSpec."""
     if not isinstance(data, dict):
         raise InvalidClueError("region phải là đối tượng JSON")
     kind_str = data.get("kind")
@@ -67,7 +49,6 @@ def parse_region_spec(data: dict) -> RegionSpec:
 
 
 def parse_clue(raw: dict[str, Any], size: int) -> Clue:
-    """Phân tích 1 clue từ dict thô và khởi tạo đối tượng Clue tương ứng."""
     validate_clue_dict(raw, size)
 
     clue_id = raw["id"]
@@ -116,7 +97,6 @@ def parse_clue(raw: dict[str, Any], size: int) -> Clue:
 
 
 def parse_clues(raw_list: list[dict[str, Any]], size: int) -> tuple[Clue, ...]:
-    """Phân tích danh sách các dictionary thành tuple các đối tượng Clue."""
     if not isinstance(raw_list, list):
         raise InvalidClueError("clues phải là danh sách")
     return tuple(parse_clue(c, size) for c in raw_list)
