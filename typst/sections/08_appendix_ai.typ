@@ -28,6 +28,9 @@ Nhóm sử dụng công cụ AI như một trợ lý trao đổi ý tưởng, r�
 
 *Một số prompt tiêu biểu*
 
+- “`/receiving-code-review` đóng vai là người kiểm dịch khởi tạo dự án (senior engineer). Xem xét đề bài `AI - Project 2.pdf` và các tài liệu phân tích của trưởng nhóm `Analysis_Report.md`, `Process.md`, `Workflow.md`. Hãy nhận xét tính đúng đắn của các yếu tố sau: [Review summary: Griductive Solver docs — 1. Retractions (R1–R8: N×N grid, 2-query baseline, desktop PyQt6, ≥2 extensions, lightweight process); 2. Real defects (A–G: `CountingSolver` wrapper, `iter_steps()` + `QTimer`, unified contracts, `app/session.py` layering, evaluator independence, deadline, oracle scope); 3. Keep; 4. Observations on `Audit_Response_TeamLead.md`; 5. Order of work]”
+- “Chọn hướng: chỉ dựng hợp đồng và chữ ký tại các biên (≥2 người dùng), thân hàm `raise NotImplementedError`. Chia 2 PR code (A: `domain`, `sat`, `clues/base`; B: chữ ký `encoding`, `reasoning`, `agent`, `engine`, `app`) và 1 PR docs/chore riêng (cập nhật 3 file md, dời `puzzles`/`results`/`tests` vào `Source/`, `requirements`). Sửa theo 4 điểm: `SatSolver` protocol và `CountingSolver` đặt trong `sat/`; `classify(cnf_kb, var_id, solver, deadline)` cùng `build_kb_cnf` ở `kb_builder`; bổ sung `errors`, `regions`, `knowledge`, `encoding`, `GameEngine` vào PR-B; bỏ bước đồng bộ `develop` và `main`. Đưa `app/session.py` vào chính thức, mỏng (`load_puzzle`, `restart`, `submit_verdict`, `hint`, `auto_solve_steps` là generator, trả dataclass), một chủ duy nhất là Hưng. Gỡ `session.py` khỏi cây `engine/` ở cả 3 tài liệu và khỏi hàng Nguyên trong `Process.md`. Chưa động vào thân hàm của module người khác. Bạn hiểu ý tôi chứ?”
+
 - “Đối chiếu toàn bộ source với đề Project 2; chỉ ra yêu cầu đã đạt và phần còn thiếu.”
 - “Kiểm tra encoder CNF có tương đương semantic evaluator trên mọi assignment nhỏ hay không.”
 - “Rà soát DPLL assumptions, propagation, backtracking và timeout.”

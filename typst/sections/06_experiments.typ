@@ -11,7 +11,7 @@ Benchmark dùng toàn bộ 17 file JSON trong `Source/puzzles/`, gồm 14 puzzle
 == Kết quả
 
 #styled_table(
-  (2.15fr, 0.55fr, 1.0fr, 0.7fr, 1.0fr, 1.05fr, 0.9fr),
+  (1.6fr, 0.3fr, 0.96fr, 0.5fr, 0.9fr, 1.45fr, 1fr),
   ([Puzzle], [N], [P/A/C], [SAT], [D/P/B], [Outcome], [Check]),
   (
     ([`griductive-3x3-01`], [3], [9/0/16], [28], [0/139/0], [SOLVED], [UNIQUE]),
