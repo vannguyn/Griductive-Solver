@@ -34,6 +34,10 @@ Với `EXACTLY(2)` trên bốn literal, encoder ghép `AT_MOST(2)` và
 vế thứ hai sinh các clause dương trên cùng các nhóm. Tổng cộng có tám
 clause trực tiếp.
 
+Chẳng hạn, với `EXACTLY(1)` trên ba biến $C_1, C_2, C_3$, vế `AT_LEAST(1)` sinh một mệnh đề dương và vế `AT_MOST(1)` sinh ba mệnh đề nhị phân loại trừ từng cặp:
+
+$ (C_1 ∨ C_2 ∨ C_3) ∧ (¬C_1 ∨ ¬C_2) ∧ (¬C_1 ∨ ¬C_3) ∧ (¬C_2 ∨ ¬C_3) $
+
 #styled_table(
   (1.45fr, 3.1fr),
   ([Thành phần], [Cách mã hóa]),
@@ -191,7 +195,7 @@ nhỏ, bao gồm cả `PARITY`, `COMPOUND` và các ca Sequential Counter.
   (
     ([Toàn bộ test suite], [`149 passed`], [Các tầng domain, SAT, encoder, agent, engine và experiments cùng hoạt động.]),
     ([Các ca có marker `xfail`], [`6 xpassed`], [Sequential Counter và `COMPOUND` hiện đã chạy thành công.]),
-    ([Benchmark puzzle], [`14/14 SOLVED`], [Tất cả puzzle đều `UNIQUE` và được giải không đoán.]),
+    ([Benchmark puzzle], [`14/17 SOLVED`], [14 puzzle chuẩn `UNIQUE` và `SOLVED`; 3 ca biên tái hiện đủ `STUCK`, `INCONSISTENT`, `TIMEOUT`.]),
   ),
   align: (left + horizon, center + horizon, left + horizon),
   caption: [Tóm tắt kiểm thử và thực nghiệm liên quan đến DPLL],
@@ -208,7 +212,7 @@ Thiết kế hiện tại giữ được ranh giới rõ giữa solver và các 
 DPLL chỉ biết CNF, còn reasoning chịu trách nhiệm dựng public KB và đặt
 câu hỏi entailment. Nhờ blocking clause trên biến chính, hệ thống cũng
 kiểm tra được tính duy nhất mà không phụ thuộc vào số lượng biến phụ.
-Toàn bộ pipeline đã được kiểm chứng bằng test suite và benchmark 14
+Toàn bộ pipeline đã được kiểm chứng bằng test suite và benchmark 17
 puzzle; các kết quả này là cơ sở cho phần đánh giá ở mục 6. Phần khai
 báo tài liệu tham khảo và việc sử dụng AI được trình bày riêng ở cuối
 báo cáo để tránh lặp lại trong chương kỹ thuật.
