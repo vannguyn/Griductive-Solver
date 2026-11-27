@@ -99,32 +99,6 @@ class HeaderBar(QWidget):
         self.level_combo.currentIndexChanged.connect(self._on_combo_changed)
         layout.addWidget(self.level_combo)
 
-        self.btn_load = QPushButton("📂  MỞ FILE", self)
-        self.btn_load.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_load.setStyleSheet("""
-            QPushButton {
-                background-color: #222834;
-                color: #E2E8F0;
-                border: 1px solid #3B465A;
-                border-radius: 8px;
-                padding: 6px 14px;
-                font-family: 'Segoe UI';
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #334155;
-                border-color: #64748B;
-            }
-            QPushButton:disabled {
-                background-color: #1F242E;
-                color: #4B5563;
-                border-color: #2D3748;
-            }
-        """)
-        self.btn_load.clicked.connect(self.load_requested.emit)
-        layout.addWidget(self.btn_load)
-
         layout.addStretch(1)
 
         # 3. Status Badge
@@ -172,7 +146,6 @@ class HeaderBar(QWidget):
 
     def set_controls_enabled(self, enabled: bool) -> None:
         self.level_combo.setEnabled(enabled)
-        self.btn_load.setEnabled(enabled)
 
     def _on_combo_changed(self, index: int) -> None:
         path = self.level_combo.itemData(index)
