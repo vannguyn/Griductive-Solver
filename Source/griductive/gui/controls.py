@@ -128,17 +128,13 @@ class HeaderBar(QWidget):
             except Exception:
                 continue
 
-            if data.get("allow_inconsistent", False):
-                continue
-
             size = int(data.get("size", 3))
             puzzle_id = str(data.get("id", path.stem))
             rel_path = path.relative_to(puzzles_dir).as_posix()
             is_tutorial = 0 if "tutorial" in puzzle_id.lower() or "tutorial" in path.stem.lower() else 1
-            is_edge = 1 if "edge" in puzzle_id.lower() or "edge" in path.stem.lower() else 0
-            prefix = "⚠️ [EDGE]" if is_edge else ("⭐" if is_tutorial == 0 else "🧩")
+            prefix = "⭐" if is_tutorial == 0 else "🧩"
             label = f"{prefix} [{size}x{size}] {puzzle_id}"
-            entries.append((is_tutorial, is_edge * 10 + size, label, rel_path))
+            entries.append((is_tutorial, size, label, rel_path))
 
         entries.sort(key=lambda item: (item[0], item[1], item[3]))
         for _, _, label, rel_path in entries:

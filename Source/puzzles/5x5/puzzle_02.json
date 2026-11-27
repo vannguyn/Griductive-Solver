@@ -1,5 +1,5 @@
 {
-  "id": "edge-5x5-timeout",
+  "id": "puzzle-5x5-02",
   "size": 5,
   "benchmark_timeout_seconds": 0.01,
   "initially_revealed": [
@@ -170,7 +170,7 @@
   },
   "clues": [
     {
-      "id": "e_a1",
+      "id": "c_a1",
       "owner": "A1",
       "type": "PARITY",
       "hint": "Even criminals in ['A3', 'B3', 'C3', 'D3', 'E3', 'A4']",
@@ -188,7 +188,7 @@
       }
     },
     {
-      "id": "e_b1",
+      "id": "c_b1",
       "owner": "B1",
       "type": "PARITY",
       "hint": "Even criminals in ['B3', 'C3', 'D3', 'E3', 'A4', 'B4']",
@@ -206,7 +206,7 @@
       }
     },
     {
-      "id": "e_c1",
+      "id": "c_c1",
       "owner": "C1",
       "type": "PARITY",
       "hint": "Even criminals in ['C3', 'D3', 'E3', 'A4', 'B4', 'C4']",
@@ -224,7 +224,7 @@
       }
     },
     {
-      "id": "e_d1",
+      "id": "c_d1",
       "owner": "D1",
       "type": "PARITY",
       "hint": "Even criminals in ['D3', 'E3', 'A4', 'B4', 'C4', 'D4']",
@@ -242,7 +242,7 @@
       }
     },
     {
-      "id": "e_e1",
+      "id": "c_e1",
       "owner": "E1",
       "type": "PARITY",
       "hint": "Even criminals in ['E3', 'A4', 'B4', 'C4', 'D4', 'E4']",
@@ -260,7 +260,7 @@
       }
     },
     {
-      "id": "e_a2",
+      "id": "c_a2",
       "owner": "A2",
       "type": "PARITY",
       "hint": "Even criminals in ['A4', 'B4', 'C4', 'D4', 'E4', 'A5']",
@@ -278,7 +278,7 @@
       }
     },
     {
-      "id": "e_b2",
+      "id": "c_b2",
       "owner": "B2",
       "type": "PARITY",
       "hint": "Even criminals in ['B4', 'C4', 'D4', 'E4', 'A5', 'B5']",
@@ -296,7 +296,7 @@
       }
     },
     {
-      "id": "e_c2",
+      "id": "c_c2",
       "owner": "C2",
       "type": "PARITY",
       "hint": "Even criminals in ['C4', 'D4', 'E4', 'A5', 'B5', 'C5']",
@@ -314,7 +314,7 @@
       }
     },
     {
-      "id": "e_d2",
+      "id": "c_d2",
       "owner": "D2",
       "type": "PARITY",
       "hint": "Even criminals in ['D4', 'E4', 'A5', 'B5', 'C5', 'D5']",
@@ -332,7 +332,7 @@
       }
     },
     {
-      "id": "e_e2",
+      "id": "c_e2",
       "owner": "E2",
       "type": "PARITY",
       "hint": "Even criminals in ['E4', 'A5', 'B5', 'C5', 'D5', 'E5']",
@@ -350,7 +350,7 @@
       }
     },
     {
-      "id": "e_a3",
+      "id": "c_a3",
       "owner": "A3",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -363,7 +363,7 @@
       "k": 0
     },
     {
-      "id": "e_b3",
+      "id": "c_b3",
       "owner": "B3",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -376,7 +376,7 @@
       "k": 0
     },
     {
-      "id": "e_c3",
+      "id": "c_c3",
       "owner": "C3",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -389,7 +389,7 @@
       "k": 0
     },
     {
-      "id": "e_d3",
+      "id": "c_d3",
       "owner": "D3",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -402,7 +402,7 @@
       "k": 0
     },
     {
-      "id": "e_e3",
+      "id": "c_e3",
       "owner": "E3",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -415,7 +415,7 @@
       "k": 0
     },
     {
-      "id": "e_a4",
+      "id": "c_a4",
       "owner": "A4",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -428,7 +428,7 @@
       "k": 0
     },
     {
-      "id": "e_b4",
+      "id": "c_b4",
       "owner": "B4",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -441,7 +441,7 @@
       "k": 0
     },
     {
-      "id": "e_c4",
+      "id": "c_c4",
       "owner": "C4",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -454,7 +454,7 @@
       "k": 0
     },
     {
-      "id": "e_d4",
+      "id": "c_d4",
       "owner": "D4",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -467,7 +467,7 @@
       "k": 0
     },
     {
-      "id": "e_e4",
+      "id": "c_e4",
       "owner": "E4",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -480,7 +480,7 @@
       "k": 0
     },
     {
-      "id": "e_a5",
+      "id": "c_a5",
       "owner": "A5",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -493,7 +493,7 @@
       "k": 0
     },
     {
-      "id": "e_b5",
+      "id": "c_b5",
       "owner": "B5",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -506,7 +506,7 @@
       "k": 0
     },
     {
-      "id": "e_c5",
+      "id": "c_c5",
       "owner": "C5",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -519,7 +519,7 @@
       "k": 0
     },
     {
-      "id": "e_d5",
+      "id": "c_d5",
       "owner": "D5",
       "type": "AT_LEAST",
       "hint": "Tautology clue",
@@ -532,7 +532,7 @@
       "k": 0
     },
     {
-      "id": "e_e5",
+      "id": "c_e5",
       "owner": "E5",
       "type": "AT_LEAST",
       "hint": "Tautology clue",

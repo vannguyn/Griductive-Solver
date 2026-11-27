@@ -1,5 +1,5 @@
 {
-  "id": "edge-3x3-k-bounds-stuck",
+  "id": "puzzle-3x3-04",
   "size": 3,
   "initially_revealed": [
     "A1"
@@ -64,7 +64,7 @@
   },
   "clues": [
     {
-      "id": "e_a1",
+      "id": "c_a1",
       "owner": "A1",
       "type": "EXACTLY",
       "hint": "Row 2 has 0 criminals",
@@ -75,7 +75,7 @@
       "k": 0
     },
     {
-      "id": "e_a2",
+      "id": "c_a2",
       "owner": "A2",
       "type": "EXACTLY",
       "hint": "Row 3 has 3 criminals",
@@ -86,7 +86,7 @@
       "k": 3
     },
     {
-      "id": "e_b2",
+      "id": "c_b2",
       "owner": "B2",
       "type": "AT_LEAST",
       "hint": "Row 1 at least 0 criminals",
@@ -97,7 +97,7 @@
       "k": 0
     },
     {
-      "id": "e_c2",
+      "id": "c_c2",
       "owner": "C2",
       "type": "AT_MOST",
       "hint": "Row 1 at most 3 criminals",
@@ -108,7 +108,7 @@
       "k": 3
     },
     {
-      "id": "e_a3",
+      "id": "c_a3",
       "owner": "A3",
       "type": "SAME",
       "hint": "B1 same C1",
@@ -116,7 +116,7 @@
       "cell_b": "C1"
     },
     {
-      "id": "e_b3",
+      "id": "c_b3",
       "owner": "B3",
       "type": "AT_MOST",
       "hint": "B1, C1 at most 2",
@@ -130,7 +130,7 @@
       "k": 2
     },
     {
-      "id": "e_c3",
+      "id": "c_c3",
       "owner": "C3",
       "type": "AT_LEAST",
       "hint": "B1, C1 at least 0",
@@ -144,7 +144,7 @@
       "k": 0
     },
     {
-      "id": "e_b1",
+      "id": "c_b1",
       "owner": "B1",
       "type": "FACT",
       "hint": "A1 is criminal",
@@ -152,7 +152,7 @@
       "status": "CRIMINAL"
     },
     {
-      "id": "e_c1",
+      "id": "c_c1",
       "owner": "C1",
       "type": "FACT",
       "hint": "A3 is criminal",

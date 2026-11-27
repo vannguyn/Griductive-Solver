@@ -69,6 +69,8 @@ def load_puzzle_from_dict(data: dict, *, verify_solution: bool = True) -> Puzzle
             raise InvalidPuzzleError(f"Giá trị solution của ô {c} phải là bool: {val}")
         solution[c] = val
 
+    should_verify = verify_solution and not bool(data.get("allow_inconsistent", False))
+
     # 4. Clues
     raw_clues = data.get("clues", [])
     if len(raw_clues) != size * size:
@@ -81,7 +83,7 @@ def load_puzzle_from_dict(data: dict, *, verify_solution: bool = True) -> Puzzle
         clues_map[clue.owner] = clue
 
         # Kiểm tra nhanh: clue phải đúng với solution ẩn
-        if verify_solution and not clue.evaluate(solution):
+        if should_verify and not clue.evaluate(solution):
             raise InvalidPuzzleError(f"Clue {clue.id} (owner={clue.owner}) mâu thuẫn với solution ẩn!")
 
     return Puzzle(

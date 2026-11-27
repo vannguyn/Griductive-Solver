@@ -301,25 +301,25 @@ def create_5x5_p01() -> dict:
     }
 
 
-def create_3x3_edge_k_bounds_stuck() -> dict:
+def create_3x3_p04() -> dict:
     sol = {
         "A1": True, "B1": False, "C1": False,
         "A2": False, "B2": False, "C2": False,
         "A3": True, "B3": True, "C3": True,
     }
     clues = [
-        {"id": "e_a1", "owner": "A1", "type": "EXACTLY", "hint": "Row 2 has 0 criminals", "region": {"kind": "row", "index": 2}, "k": 0},
-        {"id": "e_a2", "owner": "A2", "type": "EXACTLY", "hint": "Row 3 has 3 criminals", "region": {"kind": "row", "index": 3}, "k": 3},
-        {"id": "e_b2", "owner": "B2", "type": "AT_LEAST", "hint": "Row 1 at least 0 criminals", "region": {"kind": "row", "index": 1}, "k": 0},
-        {"id": "e_c2", "owner": "C2", "type": "AT_MOST", "hint": "Row 1 at most 3 criminals", "region": {"kind": "row", "index": 1}, "k": 3},
-        {"id": "e_a3", "owner": "A3", "type": "SAME", "hint": "B1 same C1", "cell_a": "B1", "cell_b": "C1"},
-        {"id": "e_b3", "owner": "B3", "type": "AT_MOST", "hint": "B1, C1 at most 2", "region": {"kind": "explicit", "cells": ["B1", "C1"]}, "k": 2},
-        {"id": "e_c3", "owner": "C3", "type": "AT_LEAST", "hint": "B1, C1 at least 0", "region": {"kind": "explicit", "cells": ["B1", "C1"]}, "k": 0},
-        {"id": "e_b1", "owner": "B1", "type": "FACT", "hint": "A1 is criminal", "target_cell": "A1", "status": "CRIMINAL"},
-        {"id": "e_c1", "owner": "C1", "type": "FACT", "hint": "A3 is criminal", "target_cell": "A3", "status": "CRIMINAL"},
+        {"id": "c_a1", "owner": "A1", "type": "EXACTLY", "hint": "Row 2 has 0 criminals", "region": {"kind": "row", "index": 2}, "k": 0},
+        {"id": "c_a2", "owner": "A2", "type": "EXACTLY", "hint": "Row 3 has 3 criminals", "region": {"kind": "row", "index": 3}, "k": 3},
+        {"id": "c_b2", "owner": "B2", "type": "AT_LEAST", "hint": "Row 1 at least 0 criminals", "region": {"kind": "row", "index": 1}, "k": 0},
+        {"id": "c_c2", "owner": "C2", "type": "AT_MOST", "hint": "Row 1 at most 3 criminals", "region": {"kind": "row", "index": 1}, "k": 3},
+        {"id": "c_a3", "owner": "A3", "type": "SAME", "hint": "B1 same C1", "cell_a": "B1", "cell_b": "C1"},
+        {"id": "c_b3", "owner": "B3", "type": "AT_MOST", "hint": "B1, C1 at most 2", "region": {"kind": "explicit", "cells": ["B1", "C1"]}, "k": 2},
+        {"id": "c_c3", "owner": "C3", "type": "AT_LEAST", "hint": "B1, C1 at least 0", "region": {"kind": "explicit", "cells": ["B1", "C1"]}, "k": 0},
+        {"id": "c_b1", "owner": "B1", "type": "FACT", "hint": "A1 is criminal", "target_cell": "A1", "status": "CRIMINAL"},
+        {"id": "c_c1", "owner": "C1", "type": "FACT", "hint": "A3 is criminal", "target_cell": "A3", "status": "CRIMINAL"},
     ]
     return {
-        "id": "edge-3x3-k-bounds-stuck",
+        "id": "puzzle-3x3-04",
         "size": 3,
         "initially_revealed": ["A1"],
         "characters": make_characters(3),
@@ -328,7 +328,7 @@ def create_3x3_edge_k_bounds_stuck() -> dict:
     }
 
 
-def create_4x4_edge_inconsistent() -> dict:
+def create_4x4_p04() -> dict:
     coords = all_coords(4)
     sol = {c: False for c in coords}
     sol["A1"] = True
@@ -336,13 +336,13 @@ def create_4x4_edge_inconsistent() -> dict:
 
     ring_b2 = ["A1", "B1", "C1", "A2", "C2", "A3", "B3", "C3"]
     clues = [
-        {"id": "e_a1", "owner": "A1", "type": "EXACTLY", "hint": "8 neighbors of B2 have exactly 4 criminals", "region": {"kind": "explicit", "cells": ring_b2}, "k": 4},
-        {"id": "e_b1", "owner": "B1", "type": "AT_MOST", "hint": "8 neighbors of B2 have at most 2 criminals", "region": {"kind": "explicit", "cells": ring_b2}, "k": 2},
+        {"id": "c_a1", "owner": "A1", "type": "EXACTLY", "hint": "8 neighbors of B2 have exactly 4 criminals", "region": {"kind": "explicit", "cells": ring_b2}, "k": 4},
+        {"id": "c_b1", "owner": "B1", "type": "AT_MOST", "hint": "8 neighbors of B2 have at most 2 criminals", "region": {"kind": "explicit", "cells": ring_b2}, "k": 2},
     ]
     for c in coords:
         if c not in ("A1", "B1"):
             clues.append({
-                "id": f"e_{c.lower()}",
+                "id": f"c_{c.lower()}",
                 "owner": c,
                 "type": "AT_LEAST",
                 "hint": "Tautology clue",
@@ -351,7 +351,7 @@ def create_4x4_edge_inconsistent() -> dict:
             })
 
     return {
-        "id": "edge-4x4-inconsistent",
+        "id": "puzzle-4x4-04",
         "size": 4,
         "allow_inconsistent": True,
         "initially_revealed": ["A1", "B1"],
@@ -361,7 +361,7 @@ def create_4x4_edge_inconsistent() -> dict:
     }
 
 
-def create_5x5_edge_timeout() -> dict:
+def create_5x5_p02() -> dict:
     coords = all_coords(5)
     sol = {c: False for c in coords}
     revealed = coords[:10]
@@ -371,7 +371,7 @@ def create_5x5_edge_timeout() -> dict:
     for idx, c in enumerate(revealed):
         window = [unrevealed[(idx + offset) % len(unrevealed)] for offset in range(6)]
         clues.append({
-            "id": f"e_{c.lower()}",
+            "id": f"c_{c.lower()}",
             "owner": c,
             "type": "PARITY",
             "hint": f"Even criminals in {window}",
@@ -381,7 +381,7 @@ def create_5x5_edge_timeout() -> dict:
 
     for c in unrevealed:
         clues.append({
-            "id": f"e_{c.lower()}",
+            "id": f"c_{c.lower()}",
             "owner": c,
             "type": "AT_LEAST",
             "hint": "Tautology clue",
@@ -390,7 +390,7 @@ def create_5x5_edge_timeout() -> dict:
         })
 
     return {
-        "id": "edge-5x5-timeout",
+        "id": "puzzle-5x5-02",
         "size": 5,
         "benchmark_timeout_seconds": 0.01,
         "initially_revealed": revealed,
@@ -405,10 +405,19 @@ def generate_edge_cases() -> None:
     from griductive.experiments.runner import run_benchmark_on_puzzle
 
     puzzles_root = Path("puzzles") if Path("puzzles").is_dir() else Path("Source/puzzles")
+    for old_rel in (
+        "3x3/edge_k_bounds_stuck.json",
+        "4x4/edge_inconsistent.json",
+        "5x5/edge_timeout.json",
+    ):
+        old_file = puzzles_root / old_rel
+        if old_file.exists():
+            old_file.unlink()
+
     edge_specs = [
-        (puzzles_root / "3x3/edge_k_bounds_stuck.json", create_3x3_edge_k_bounds_stuck(), SolveStatus.STUCK),
-        (puzzles_root / "4x4/edge_inconsistent.json", create_4x4_edge_inconsistent(), SolveStatus.INCONSISTENT),
-        (puzzles_root / "5x5/edge_timeout.json", create_5x5_edge_timeout(), SolveStatus.TIMEOUT),
+        (puzzles_root / "3x3/puzzle_04.json", create_3x3_p04(), SolveStatus.STUCK),
+        (puzzles_root / "4x4/puzzle_04.json", create_4x4_p04(), SolveStatus.INCONSISTENT),
+        (puzzles_root / "5x5/puzzle_02.json", create_5x5_p02(), SolveStatus.TIMEOUT),
     ]
 
     for p, p_data, expected_status in edge_specs:
