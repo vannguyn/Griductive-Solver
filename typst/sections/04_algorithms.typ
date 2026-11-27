@@ -6,9 +6,6 @@
 
 Phần này trình bày chi tiết bộ giải SAT DPLL, giao diện CNF, cơ chế
 entailment, kiểm tra nghiệm duy nhất và vòng lặp suy diễn của tác tử.
-Nội dung kỹ thuật được tổ chức lại từ tài liệu `Dpll-solver.typ` để nằm
-trong đúng mục 4 của báo cáo, đồng thời cập nhật theo source và kết quả
-kiểm thử hiện tại.
 
 #callout_note(
   [

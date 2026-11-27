@@ -45,11 +45,9 @@ Hidden status và clue chưa lật không thuộc `KB_t`. Khi người chơi ho�
 
 Với biến $C_i$, hệ thống kiểm tra hai truy vấn:
 
-#raw("KB_t |= C_i iff KB_t AND NOT C_i is UNSAT")
-thì truy vấn là `UNSAT`.
+#raw("KB_t |= C_i      iff  KB_t AND NOT C_i is UNSAT")
 
-#raw("KB_t |= NOT C_i iff KB_t AND C_i is UNSAT")
-thì truy vấn là `UNSAT`.
+#raw("KB_t |= NOT C_i  iff  KB_t AND C_i is UNSAT")
 
 Hai truy vấn đều SAT cho kết quả `UNKNOWN`; cả hai UNSAT chỉ xảy ra khi KB không nhất quán.
 
