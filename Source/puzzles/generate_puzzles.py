@@ -301,29 +301,150 @@ def create_5x5_p01() -> dict:
     }
 
 
-def generate_all() -> None:
-    puzzles_to_generate = [
-        ("Source/puzzles/3x3/puzzle_01.json", create_3x3_p01()),
-        ("Source/puzzles/3x3/puzzle_02.json", create_3x3_p02()),
-        ("Source/puzzles/3x3/puzzle_03.json", create_3x3_p03()),
-        ("Source/puzzles/4x4/puzzle_01.json", create_4x4_p01()),
-        ("Source/puzzles/4x4/puzzle_02.json", create_4x4_p02()),
-        ("Source/puzzles/4x4/puzzle_03.json", create_4x4_p03()),
-        ("Source/puzzles/5x5/puzzle_01.json", create_5x5_p01()),
+def create_3x3_edge_k_bounds_stuck() -> dict:
+    sol = {
+        "A1": True, "B1": False, "C1": False,
+        "A2": False, "B2": False, "C2": False,
+        "A3": True, "B3": True, "C3": True,
+    }
+    clues = [
+        {"id": "e_a1", "owner": "A1", "type": "EXACTLY", "hint": "Row 2 has 0 criminals", "region": {"kind": "row", "index": 2}, "k": 0},
+        {"id": "e_a2", "owner": "A2", "type": "EXACTLY", "hint": "Row 3 has 3 criminals", "region": {"kind": "row", "index": 3}, "k": 3},
+        {"id": "e_b2", "owner": "B2", "type": "AT_LEAST", "hint": "Row 1 at least 0 criminals", "region": {"kind": "row", "index": 1}, "k": 0},
+        {"id": "e_c2", "owner": "C2", "type": "AT_MOST", "hint": "Row 1 at most 3 criminals", "region": {"kind": "row", "index": 1}, "k": 3},
+        {"id": "e_a3", "owner": "A3", "type": "SAME", "hint": "B1 same C1", "cell_a": "B1", "cell_b": "C1"},
+        {"id": "e_b3", "owner": "B3", "type": "AT_MOST", "hint": "B1, C1 at most 2", "region": {"kind": "explicit", "cells": ["B1", "C1"]}, "k": 2},
+        {"id": "e_c3", "owner": "C3", "type": "AT_LEAST", "hint": "B1, C1 at least 0", "region": {"kind": "explicit", "cells": ["B1", "C1"]}, "k": 0},
+        {"id": "e_b1", "owner": "B1", "type": "FACT", "hint": "A1 is criminal", "target_cell": "A1", "status": "CRIMINAL"},
+        {"id": "e_c1", "owner": "C1", "type": "FACT", "hint": "A3 is criminal", "target_cell": "A3", "status": "CRIMINAL"},
+    ]
+    return {
+        "id": "edge-3x3-k-bounds-stuck",
+        "size": 3,
+        "initially_revealed": ["A1"],
+        "characters": make_characters(3),
+        "solution": sol,
+        "clues": clues,
+    }
+
+
+def create_4x4_edge_inconsistent() -> dict:
+    coords = all_coords(4)
+    sol = {c: False for c in coords}
+    sol["A1"] = True
+    sol["B1"] = True
+
+    ring_b2 = ["A1", "B1", "C1", "A2", "C2", "A3", "B3", "C3"]
+    clues = [
+        {"id": "e_a1", "owner": "A1", "type": "EXACTLY", "hint": "8 neighbors of B2 have exactly 4 criminals", "region": {"kind": "explicit", "cells": ring_b2}, "k": 4},
+        {"id": "e_b1", "owner": "B1", "type": "AT_MOST", "hint": "8 neighbors of B2 have at most 2 criminals", "region": {"kind": "explicit", "cells": ring_b2}, "k": 2},
+    ]
+    for c in coords:
+        if c not in ("A1", "B1"):
+            clues.append({
+                "id": f"e_{c.lower()}",
+                "owner": c,
+                "type": "AT_LEAST",
+                "hint": "Tautology clue",
+                "region": {"kind": "explicit", "cells": ["A1"]},
+                "k": 0,
+            })
+
+    return {
+        "id": "edge-4x4-inconsistent",
+        "size": 4,
+        "allow_inconsistent": True,
+        "initially_revealed": ["A1", "B1"],
+        "characters": make_characters(4),
+        "solution": sol,
+        "clues": clues,
+    }
+
+
+def create_5x5_edge_timeout() -> dict:
+    coords = all_coords(5)
+    sol = {c: False for c in coords}
+    revealed = coords[:10]
+    unrevealed = coords[10:]
+
+    clues = []
+    for idx, c in enumerate(revealed):
+        window = [unrevealed[(idx + offset) % len(unrevealed)] for offset in range(6)]
+        clues.append({
+            "id": f"e_{c.lower()}",
+            "owner": c,
+            "type": "PARITY",
+            "hint": f"Even criminals in {window}",
+            "parity": "EVEN",
+            "region": {"kind": "explicit", "cells": window},
+        })
+
+    for c in unrevealed:
+        clues.append({
+            "id": f"e_{c.lower()}",
+            "owner": c,
+            "type": "AT_LEAST",
+            "hint": "Tautology clue",
+            "region": {"kind": "explicit", "cells": ["A1"]},
+            "k": 0,
+        })
+
+    return {
+        "id": "edge-5x5-timeout",
+        "size": 5,
+        "benchmark_timeout_seconds": 0.01,
+        "initially_revealed": revealed,
+        "characters": make_characters(5),
+        "solution": sol,
+        "clues": clues,
+    }
+
+
+def generate_edge_cases() -> None:
+    from griductive.domain.types import SolveStatus
+    from griductive.experiments.runner import run_benchmark_on_puzzle
+
+    puzzles_root = Path("puzzles") if Path("puzzles").is_dir() else Path("Source/puzzles")
+    edge_specs = [
+        (puzzles_root / "3x3/edge_k_bounds_stuck.json", create_3x3_edge_k_bounds_stuck(), SolveStatus.STUCK),
+        (puzzles_root / "4x4/edge_inconsistent.json", create_4x4_edge_inconsistent(), SolveStatus.INCONSISTENT),
+        (puzzles_root / "5x5/edge_timeout.json", create_5x5_edge_timeout(), SolveStatus.TIMEOUT),
     ]
 
-    for rel_path, p_data in puzzles_to_generate:
-        p = Path(rel_path)
+    for p, p_data, expected_status in edge_specs:
         p.parent.mkdir(parents=True, exist_ok=True)
         with open(p, "w", encoding="utf-8") as f:
             json.dump(p_data, f, indent=2, ensure_ascii=False)
-        print(f"Generated {rel_path}")
+
+        metrics = run_benchmark_on_puzzle(p)
+        print(f"Generated {p} -> outcome={metrics.outcome.value} (expected={expected_status.value})")
+        assert metrics.outcome == expected_status, f"Sai trạng thái biên: {metrics.outcome} != {expected_status}"
+
+
+def generate_all() -> None:
+    puzzles_root = Path("puzzles") if Path("puzzles").is_dir() else Path("Source/puzzles")
+    puzzles_to_generate = [
+        (puzzles_root / "3x3/puzzle_01.json", create_3x3_p01()),
+        (puzzles_root / "3x3/puzzle_02.json", create_3x3_p02()),
+        (puzzles_root / "3x3/puzzle_03.json", create_3x3_p03()),
+        (puzzles_root / "4x4/puzzle_01.json", create_4x4_p01()),
+        (puzzles_root / "4x4/puzzle_02.json", create_4x4_p02()),
+        (puzzles_root / "4x4/puzzle_03.json", create_4x4_p03()),
+        (puzzles_root / "5x5/puzzle_01.json", create_5x5_p01()),
+    ]
+
+    for p, p_data in puzzles_to_generate:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(p_data, f, indent=2, ensure_ascii=False)
+        print(f"Generated {p}")
 
         # Kiểm định ngay sau khi sinh
         valid, msg = validate_puzzle_file(p)
         print(f"  -> Validation: {'PASS' if valid else 'FAIL'}: {msg}")
         assert valid, f"Puzzle sinh ra không đạt chuẩn: {msg}"
 
+    generate_edge_cases()
     print("\nALL PUZZLES GENERATED AND VERIFIED 100% VALID!")
 
 
