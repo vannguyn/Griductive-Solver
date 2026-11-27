@@ -8,6 +8,7 @@ Tác dụng:
     - Tương thích 100% với ControlPanel API của MainWindow.
 """
 
+import json
 from pathlib import Path
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -94,14 +95,35 @@ class HeaderBar(QWidget):
                 padding: 4px;
             }
         """)
-        self.level_combo.addItem("⭐ [3x3] Tutorial (Knotwise Griductive)", "3x3/tutorial.json")
-        self.level_combo.addItem("🧩 [3x3] Case 01: The Suspects", "3x3/p01.json")
-        self.level_combo.addItem("🧩 [3x3] Case 02: Cross Investigation", "3x3/p02.json")
-        self.level_combo.addItem("🔥 [4x4] Case 03: The Syndicate (16 Cells)", "4x4/p01.json")
-        self.level_combo.addItem("🔥 [4x4] Case 04: Checkered Clues", "4x4/p02.json")
-        self.level_combo.addItem("⚡ [5x5] Case 05: Master Detective (25 Cells)", "5x5/p01.json")
+        self._populate_levels()
         self.level_combo.currentIndexChanged.connect(self._on_combo_changed)
         layout.addWidget(self.level_combo)
+
+        self.btn_load = QPushButton("📂  MỞ FILE", self)
+        self.btn_load.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_load.setStyleSheet("""
+            QPushButton {
+                background-color: #222834;
+                color: #E2E8F0;
+                border: 1px solid #3B465A;
+                border-radius: 8px;
+                padding: 6px 14px;
+                font-family: 'Segoe UI';
+                font-size: 12px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+                border-color: #64748B;
+            }
+            QPushButton:disabled {
+                background-color: #1F242E;
+                color: #4B5563;
+                border-color: #2D3748;
+            }
+        """)
+        self.btn_load.clicked.connect(self.load_requested.emit)
+        layout.addWidget(self.btn_load)
 
         layout.addStretch(1)
 
@@ -118,6 +140,39 @@ class HeaderBar(QWidget):
             letter-spacing: 0.5px;
         """)
         layout.addWidget(self.status_badge)
+
+    def _populate_levels(self) -> None:
+        puzzles_dir = Path(__file__).resolve().parent.parent.parent / "puzzles"
+        if not puzzles_dir.is_dir():
+            return
+
+        entries: list[tuple[int, int, str, str]] = []
+        for path in sorted(puzzles_dir.glob("**/*.json")):
+            try:
+                with open(path, "r", encoding="utf-8") as puzzle_file:
+                    data = json.load(puzzle_file)
+            except Exception:
+                continue
+
+            if data.get("allow_inconsistent", False):
+                continue
+
+            size = int(data.get("size", 3))
+            puzzle_id = str(data.get("id", path.stem))
+            rel_path = path.relative_to(puzzles_dir).as_posix()
+            is_tutorial = 0 if "tutorial" in puzzle_id.lower() or "tutorial" in path.stem.lower() else 1
+            is_edge = 1 if "edge" in puzzle_id.lower() or "edge" in path.stem.lower() else 0
+            prefix = "⚠️ [EDGE]" if is_edge else ("⭐" if is_tutorial == 0 else "🧩")
+            label = f"{prefix} [{size}x{size}] {puzzle_id}"
+            entries.append((is_tutorial, is_edge * 10 + size, label, rel_path))
+
+        entries.sort(key=lambda item: (item[0], item[1], item[3]))
+        for _, _, label, rel_path in entries:
+            self.level_combo.addItem(label, rel_path)
+
+    def set_controls_enabled(self, enabled: bool) -> None:
+        self.level_combo.setEnabled(enabled)
+        self.btn_load.setEnabled(enabled)
 
     def _on_combo_changed(self, index: int) -> None:
         path = self.level_combo.itemData(index)
@@ -361,4 +416,4 @@ class ControlPanel(QWidget):
 
     def set_auto_running(self, running: bool) -> None:
         self.bottom.set_auto_running(running)
-        self.header.level_combo.setEnabled(not running)
+        self.header.set_controls_enabled(not running)
