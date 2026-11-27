@@ -57,8 +57,9 @@ def export_to_latex(metrics: list[PuzzleMetrics], output_path: str | Path) -> No
     ]
     for m in metrics:
         total_v = m.primary_vars + m.aux_vars
+        safe_id = m.puzzle_id.replace("_", r"\_")
         lines.append(
-            f"{m.puzzle_id} & {m.grid_size}x{m.grid_size} & {total_v} & {m.clauses} & "
+            f"{safe_id} & {m.grid_size}x{m.grid_size} & {total_v} & {m.clauses} & "
             f"{m.total_sat_calls} & {m.total_decisions} & {m.reasoning_steps} & "
             f"{m.total_runtime_ms:.1f} & {m.outcome.value} \\\\"
         )
@@ -105,6 +106,8 @@ def generate_svg_chart(metrics: list[PuzzleMetrics], output_path: Path) -> None:
         '  .bar-3 { fill: #3b82f6; }',
         '  .bar-4 { fill: #10b981; }',
         '  .bar-5 { fill: #f59e0b; }',
+        '  .bar-stuck { fill: #8b5cf6; }',
+        '  .bar-err { fill: #ef4444; }',
         '  .val { font-family: sans-serif; font-size: 10px; font-weight: bold; fill: #0f172a; text-anchor: middle; }',
         '</style>',
         f'<text class="title" x="{width // 2}" y="35">Griductive Solver - Thời gian thực thi theo Puzzle (ms)</text>',
@@ -129,7 +132,12 @@ def generate_svg_chart(metrics: list[PuzzleMetrics], output_path: Path) -> None:
         bar_h = (m.total_runtime_ms / max_time) * plot_height
         y = margin_top + plot_height - bar_h
 
-        bar_cls = "bar-3" if m.grid_size == 3 else ("bar-4" if m.grid_size == 4 else "bar-5")
+        if m.outcome.value in ("INCONSISTENT", "TIMEOUT"):
+            bar_cls = "bar-err"
+        elif m.outcome.value == "STUCK":
+            bar_cls = "bar-stuck"
+        else:
+            bar_cls = "bar-3" if m.grid_size == 3 else ("bar-4" if m.grid_size == 4 else "bar-5")
         svg_parts.append(f'<rect class="{bar_cls}" x="{x:.1f}" y="{y:.1f}" width="{bar_width}" height="{bar_h:.1f}" rx="3" />')
         svg_parts.append(f'<text class="val" x="{x + bar_width / 2:.1f}" y="{y - 5:.1f}">{m.total_runtime_ms:.1f}</text>')
 
@@ -168,7 +176,12 @@ def plot_runtime_chart(metrics: list[PuzzleMetrics], output_path: str | Path) ->
         import matplotlib.pyplot as plt
         ids = [m.puzzle_id for m in metrics]
         times = [m.total_runtime_ms for m in metrics]
-        colors = ['#3b82f6' if m.grid_size == 3 else ('#10b981' if m.grid_size == 4 else '#f59e0b') for m in metrics]
+        colors = [
+            "#ef4444" if m.outcome.value in ("INCONSISTENT", "TIMEOUT")
+            else ("#8b5cf6" if m.outcome.value == "STUCK"
+            else ("#3b82f6" if m.grid_size == 3 else ("#10b981" if m.grid_size == 4 else "#f59e0b")))
+            for m in metrics
+        ]
 
         plt.figure(figsize=(10, 5))
         plt.bar(ids, times, color=colors)
