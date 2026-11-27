@@ -27,7 +27,7 @@ from griductive.domain.grid import all_coords, validate_coord
 from griductive.engine.puzzle import Character, Puzzle
 
 
-def load_puzzle_from_dict(data: dict) -> Puzzle:
+def load_puzzle_from_dict(data: dict, *, verify_solution: bool = True) -> Puzzle:
     """Nạp và kiểm tra tính hợp lệ của puzzle từ dictionary."""
     if not isinstance(data, dict):
         raise InvalidPuzzleError("Dữ liệu puzzle phải là dictionary JSON.")
@@ -81,7 +81,7 @@ def load_puzzle_from_dict(data: dict) -> Puzzle:
         clues_map[clue.owner] = clue
 
         # Kiểm tra nhanh: clue phải đúng với solution ẩn
-        if not clue.evaluate(solution):
+        if verify_solution and not clue.evaluate(solution):
             raise InvalidPuzzleError(f"Clue {clue.id} (owner={clue.owner}) mâu thuẫn với solution ẩn!")
 
     return Puzzle(
@@ -94,7 +94,7 @@ def load_puzzle_from_dict(data: dict) -> Puzzle:
     )
 
 
-def load_puzzle_file(path: str | Path) -> Puzzle:
+def load_puzzle_file(path: str | Path, *, verify_solution: bool = True) -> Puzzle:
     """Đọc file JSON từ đĩa và nạp thành đối tượng Puzzle."""
     p = Path(path)
     if not p.exists():
@@ -105,4 +105,4 @@ def load_puzzle_file(path: str | Path) -> Puzzle:
     except json.JSONDecodeError as e:
         raise InvalidPuzzleError(f"File JSON không hợp lệ: {e}")
 
-    return load_puzzle_from_dict(data)
+    return load_puzzle_from_dict(data, verify_solution=verify_solution)
