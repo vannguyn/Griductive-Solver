@@ -155,8 +155,10 @@ class MainWindow(QMainWindow):
         self._victory_epoch = 0
         self._manual_step_count = 0
 
-        # Tự động nạp màn Tutorial mẫu khi khởi động để trải nghiệm ngay
-        self._on_preset_level_selected("3x3/tutorial.json")
+        if self.header_bar.level_combo.count() > 0:
+            first_rel_path = self.header_bar.level_combo.itemData(0)
+            if first_rel_path:
+                self._on_preset_level_selected(first_rel_path)
 
     # ------------------------------------------------------------ Helpers
     def _show_state(self, state: PublicState, new_owner: Coord | None = None) -> None:
@@ -331,6 +333,7 @@ class MainWindow(QMainWindow):
 
         self._last_auto_step = None
         self._reset_highlights()
+        self.header_bar.level_combo.setEnabled(False)
         self.bottom_bar.set_auto_running(True)
         self.control_panel.set_auto_running(True)
         self.board_view.set_input_enabled(False)
@@ -340,6 +343,7 @@ class MainWindow(QMainWindow):
         """Dừng Auto Solve và trả quyền điều khiển cho người chơi."""
         self._timer.stop()
         self._auto_solve_gen = None
+        self.header_bar.level_combo.setEnabled(True)
         self.bottom_bar.set_auto_running(False)
         self.control_panel.set_auto_running(False)
         self.board_view.set_input_enabled(True)
