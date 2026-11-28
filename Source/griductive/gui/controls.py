@@ -4,7 +4,7 @@ Tác dụng:
     Cung cấp các thanh giao diện theo chuẩn thiết kế desktop puzzle game:
     - HeaderBar: Logo game, bộ chọn Daily Case / Level và trạng thái vụ án.
     - ClueBanner: Dải băng hiển thị manh mối / suy luận trọng tâm bên dưới bàn cờ.
-    - BottomBar: Các nút chức năng [ GHI CHÚ ], [ GỢI Ý ], [ TỰ ĐỘNG GIẢI ], [ CHƠI LẠI ].
+    - BottomBar: Các nút chức năng [ GỢI Ý ], [ TỰ ĐỘNG GIẢI ], [ CHƠI LẠI ].
     - Tương thích 100% với ControlPanel API của MainWindow.
 """
 
@@ -209,14 +209,13 @@ class ClueBanner(QFrame):
 
 
 class BottomBar(QWidget):
-    """Thanh điều khiển dưới cùng: Ghi chú, Gợi ý, Tự động giải, Tốc độ, Chơi lại."""
+    """Thanh điều khiển dưới cùng: Gợi ý, Tự động giải, Tốc độ, Chơi lại."""
 
     restart_requested = pyqtSignal()
     hint_requested = pyqtSignal()
     auto_solve_requested = pyqtSignal()
     stop_requested = pyqtSignal()
     speed_changed = pyqtSignal(int)
-    mark_toggled = pyqtSignal(bool)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -228,29 +227,21 @@ class BottomBar(QWidget):
         layout.setContentsMargins(16, 0, 16, 0)
         layout.setSpacing(12)
 
-        # 1. Nút Ghi chú (Mark)
-        self.btn_mark = QPushButton("🏷  GHI CHÚ", self)
-        self.btn_mark.setCheckable(True)
-        self.btn_mark.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_mark.setStyleSheet(self._btn_style("#334155", "#64748B"))
-        self.btn_mark.toggled.connect(self.mark_toggled.emit)
-        layout.addWidget(self.btn_mark)
-
-        # 2. Nút Gợi ý (Hint)
+        # 1. Nút Gợi ý (Hint)
         self.btn_hint = QPushButton("💡  GỢI Ý", self)
         self.btn_hint.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_hint.setStyleSheet(self._btn_style("#0369A1", "#0284C7"))
         self.btn_hint.clicked.connect(self.hint_requested.emit)
         layout.addWidget(self.btn_hint)
 
-        # 3. Nút Tự động giải (Auto Solve)
+        # 2. Nút Tự động giải (Auto Solve)
         self.btn_auto_solve = QPushButton("⚡  TỰ ĐỘNG GIẢI", self)
         self.btn_auto_solve.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_auto_solve.setStyleSheet(self._btn_style("#6D28D9", "#7C3AED"))
         self.btn_auto_solve.clicked.connect(self._on_auto_clicked)
         layout.addWidget(self.btn_auto_solve)
 
-        # 4. Thanh trượt tốc độ giải
+        # 3. Thanh trượt tốc độ giải
         speed_box = QHBoxLayout()
         speed_box.setSpacing(8)
         speed_lbl = QLabel("Tốc độ:", self)
@@ -271,7 +262,7 @@ class BottomBar(QWidget):
 
         layout.addStretch(1)
 
-        # 5. Nút Chơi lại (Restart)
+        # 4. Nút Chơi lại (Restart)
         self.btn_restart = QPushButton("🔄  CHƠI LẠI", self)
         self.btn_restart.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_restart.setStyleSheet(self._btn_style("#374151", "#4B5563"))
@@ -320,7 +311,6 @@ class BottomBar(QWidget):
     def set_game_active(self, active: bool) -> None:
         self._game_active = active
         if not self._auto_running:
-            self.btn_mark.setEnabled(active)
             self.btn_hint.setEnabled(active)
             self.btn_auto_solve.setEnabled(active)
             self.btn_restart.setEnabled(active)
@@ -331,7 +321,6 @@ class BottomBar(QWidget):
         self.btn_auto_solve.setStyleSheet(
             self._btn_style("#B91C1C", "#DC2626") if running else self._btn_style("#6D28D9", "#7C3AED")
         )
-        self.btn_mark.setEnabled(not running)
         self.btn_hint.setEnabled(self._game_active and not running)
         self.btn_restart.setEnabled(self._game_active and not running)
 
