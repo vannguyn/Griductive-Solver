@@ -1,0 +1,145 @@
+{
+  "id": "puzzle-3x3-02",
+  "size": 3,
+  "initially_revealed": [
+    "A1"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Abel",
+      "job": "Detective"
+    },
+    {
+      "cell": "B1",
+      "name": "Bea",
+      "job": "Analyst"
+    },
+    {
+      "cell": "C1",
+      "name": "Cora",
+      "job": "Journalist"
+    },
+    {
+      "cell": "A2",
+      "name": "Dara",
+      "job": "Engineer"
+    },
+    {
+      "cell": "B2",
+      "name": "Eli",
+      "job": "Doctor"
+    },
+    {
+      "cell": "C2",
+      "name": "Faye",
+      "job": "Teacher"
+    },
+    {
+      "cell": "A3",
+      "name": "Gus",
+      "job": "Designer"
+    },
+    {
+      "cell": "B3",
+      "name": "Hana",
+      "job": "Lawyer"
+    },
+    {
+      "cell": "C3",
+      "name": "Iris",
+      "job": "Pilot"
+    }
+  ],
+  "solution": {
+    "A1": false,
+    "B1": true,
+    "C1": true,
+    "A2": true,
+    "B2": false,
+    "C2": true,
+    "A3": false,
+    "B3": false,
+    "C3": true
+  },
+  "clues": [
+    {
+      "id": "c_a1",
+      "owner": "A1",
+      "type": "FACT",
+      "hint": "B1 is criminal",
+      "target_cell": "B1",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_b1",
+      "owner": "B1",
+      "type": "SAME",
+      "hint": "B1 same C1",
+      "cell_a": "B1",
+      "cell_b": "C1"
+    },
+    {
+      "id": "c_c1",
+      "owner": "C1",
+      "type": "SAME",
+      "hint": "C1 same C2",
+      "cell_a": "C1",
+      "cell_b": "C2"
+    },
+    {
+      "id": "c_c2",
+      "owner": "C2",
+      "type": "DIFFERENT",
+      "hint": "C2 diff B2",
+      "cell_a": "C2",
+      "cell_b": "B2"
+    },
+    {
+      "id": "c_b2",
+      "owner": "B2",
+      "type": "DIFFERENT",
+      "hint": "B2 diff A2",
+      "cell_a": "B2",
+      "cell_b": "A2"
+    },
+    {
+      "id": "c_a2",
+      "owner": "A2",
+      "type": "PARITY",
+      "hint": "Col 1 odd criminal count",
+      "parity": "ODD",
+      "region": {
+        "kind": "column",
+        "index": 1
+      }
+    },
+    {
+      "id": "c_a3",
+      "owner": "A3",
+      "type": "FACT",
+      "hint": "B3 is innocent",
+      "target_cell": "B3",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_b3",
+      "owner": "B3",
+      "type": "DIFFERENT",
+      "hint": "B3 diff C3",
+      "cell_a": "B3",
+      "cell_b": "C3"
+    },
+    {
+      "id": "c_c3",
+      "owner": "C3",
+      "type": "AT_MOST",
+      "hint": "Row 3 at most 1 criminal",
+      "region": {
+        "kind": "row",
+        "index": 3
+      },
+      "k": 1
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "id": "puzzle-3x3-01",
+  "size": 3,
+  "initially_revealed": [
+    "A1"
+  ],
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Abel",
+      "job": "Detective"
+    },
+    {
+      "cell": "B1",
+      "name": "Bea",
+      "job": "Analyst"
+    },
+    {
+      "cell": "C1",
+      "name": "Cora",
+      "job": "Journalist"
+    },
+    {
+      "cell": "A2",
+      "name": "Dara",
+      "job": "Engineer"
+    },
+    {
+      "cell": "B2",
+      "name": "Eli",
+      "job": "Doctor"
+    },
+    {
+      "cell": "C2",
+      "name": "Faye",
+      "job": "Teacher"
+    },
+    {
+      "cell": "A3",
+      "name": "Gus",
+      "job": "Designer"
+    },
+    {
+      "cell": "B3",
+      "name": "Hana",
+      "job": "Lawyer"
+    },
+    {
+      "cell": "C3",
+      "name": "Iris",
+      "job": "Pilot"
+    }
+  ],
+  "solution": {
+    "A1": true,
+    "B1": false,
+    "C1": false,
+    "A2": false,
+    "B2": true,
+    "C2": true,
+    "A3": true,
+    "B3": true,
+    "C3": true
+  },
+  "clues": [
+    {
+      "id": "c_a1",
+      "owner": "A1",
+      "type": "EXACTLY",
+      "hint": "Row 1 exactly 1 criminal",
+      "region": {
+        "kind": "row",
+        "index": 1
+      },
+      "k": 1
+    },
+    {
+      "id": "c_b1",
+      "owner": "B1",
+      "type": "FACT",
+      "hint": "B2 is criminal",
+      "target_cell": "B2",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_c1",
+      "owner": "C1",
+      "type": "DIFFERENT",
+      "hint": "C1 diff C2",
+      "cell_a": "C1",
+      "cell_b": "C2"
+    },
+    {
+      "id": "c_a2",
+      "owner": "A2",
+      "type": "DIFFERENT",
+      "hint": "A2 diff B3",
+      "cell_a": "A2",
+      "cell_b": "B3"
+    },
+    {
+      "id": "c_b2",
+      "owner": "B2",
+      "type": "FACT",
+      "hint": "A2 is innocent",
+      "target_cell": "A2",
+      "status": "INNOCENT"
+    },
+    {
+      "id": "c_c2",
+      "owner": "C2",
+      "type": "SAME",
+      "hint": "C2 same C3",
+      "cell_a": "C2",
+      "cell_b": "C3"
+    },
+    {
+      "id": "c_a3",
+      "owner": "A3",
+      "type": "FACT",
+      "hint": "C3 is criminal",
+      "target_cell": "C3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_b3",
+      "owner": "B3",
+      "type": "FACT",
+      "hint": "A3 is criminal",
+      "target_cell": "A3",
+      "status": "CRIMINAL"
+    },
+    {
+      "id": "c_c3",
+      "owner": "C3",
+      "type": "AT_MOST",
+      "hint": "Row 3 at most 3 criminals",
+      "region": {
+        "kind": "row",
+        "index": 3
+      },
+      "k": 3
+    }
+  ]
+}

@@ -41,6 +41,12 @@ def validate_puzzle_file(path: str | Path, direct_threshold: int = 64) -> tuple[
     encoder = Encoder(varmap=varmap, direct_threshold=direct_threshold)
     cnf, _ = encoder.encode(list(puzzle.clues.values()))
 
+    # Bổ sung các ô lộ diện ban đầu (initially_revealed) vào CNF
+    for cell in puzzle.initially_revealed:
+        var = varmap.coord_to_var(cell)
+        lit = var if puzzle.solution[cell] else -var
+        cnf.add_clause([lit])
+
     solver = DPLLSolver()
     uniq_res = check_uniqueness(cnf, num_primary_vars=varmap.num_primary_vars, solver=solver)
     if uniq_res.result != UniquenessResult.UNIQUE:
