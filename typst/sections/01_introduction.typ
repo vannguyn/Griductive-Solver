@@ -8,7 +8,7 @@
 
 Griductive là một trò chơi suy diễn trên lưới. Mỗi ô chứa một nhân vật có trạng thái ẩn là `CRIMINAL` hoặc `INNOCENT`, đồng thời sở hữu manh mối có nội dung đúng. Người chơi chỉ được lật một thẻ khi trạng thái của nhân vật đã được suy ra từ các manh mối đã có trước đó. Vì vậy, ta không thể đoán nghiệm, mà là kiểm tra hệ quả logic của Knowledge Base tăng dần.
 
-Link video hướng dẫn chơi và sử dụng các chức năng mà nhóm đã cài đặt: 
+Link video: https://drive.google.com/file/d/1J64Ka3cbOS2ott92SYkqXLO_36-otup3/view?usp=sharing
 == Mục tiêu
 
 Mục tiêu của nhóm là xây dựng pipeline hoàn chỉnh:
